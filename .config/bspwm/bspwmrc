@@ -1,0 +1,48 @@
+#! /bin/sh
+
+sxhkd &
+
+bspc monitor -d I II III IV V VI VII VIII IX X
+
+bspc config bottom_padding 30
+
+bspc config border_width         1
+bspc config window_gap           10
+
+bspc config split_ratio          0.52
+bspc config borderless_monocle   true
+bspc config gapless_monocle      false
+bspc config focus_follows_pointer true
+bspc config pointer_modifier mod1
+bspc config border_radius 10
+
+bspc config normal_border_color "#484848"
+#bspc config focused_border_color "#9999FF"
+bspc config focused_border_color "#00AAAAAA"
+bspc config urgent_border_color "#B58900"
+bspc config presel_border_color "#26E2FF"
+
+bspc rule -a Gimp desktop='^8' state=floating follow=on
+bspc rule -a Chromium desktop='^2'
+bspc rule -a mplayer2 state=floating
+bspc rule -a Kupfer.py focus=on
+bspc rule -a Screenkey manage=off
+bspc rule -a pythonconsole state=floating
+bspc rule -a LearnOpenGL state=floating
+bspc rule -a Anki state=floating
+
+xrdb ~/.Xresources
+feh --bg-fill ~/Backgrounds/jakob-owens-224351-unsplash.jpg
+sh ~/.config/polybar/launch.sh
+
+# set desktop background
+feh --bg-fill ~/Backgrounds/Arch.png
+
+# load compton, unless it is already running, then stop it first, then start it
+# again.
+if [[ $(ps -e | grep compton) ]]; then
+	pkill compton
+	compton --config ~/.config/compton.conf -b
+else
+	compton --config ~/.config/compton.conf -b
+fi
