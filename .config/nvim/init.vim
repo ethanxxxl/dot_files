@@ -19,7 +19,7 @@ Plugin 'NLKNguyen/papercolor-theme'
 Plugin 'tikhomirov/vim-glsl'
 Plugin 'hdima/python-syntax'
 Plugin 'plasticboy/vim-markdown'
-Plugin 'jeaye/color_coded'
+Plugin 'avr.vim'
 
 Plugin 'scrooloose/nerdtree'
 
@@ -33,6 +33,7 @@ Plugin 'tpope/vim-obsession'
 
 call vundle#end()
 filetype plugin indent on
+filetype plugin on
 
 "
 " Options
@@ -66,7 +67,7 @@ set autoindent
 set smartindent
 
 "color and syntax
-syntax enable
+"syntax enable
 set t_Co=256
 set background=dark
 colorscheme PaperColor
@@ -179,6 +180,10 @@ let g:ycm_clangd_binary_path = "~/.clangd/clang-9.0.1.src/build"
 let g:ycm_add_preview_to_completeopt = 1
 let g:ycm_clangd_uses_ycmd_caching = 0
 let g:ycm_clangd_binary_path = exepath("clangd")
+
+let g:ycm_show_diagnostics_ui=0
+let g:ycm_enable_diagnostic_highlighting=0
+let g:ycm_enable_diagnostic_signs=0
 
 
 "make ycm compatible with ultisnips
