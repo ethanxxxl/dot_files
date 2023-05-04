@@ -22,9 +22,10 @@
 
        :completion
        (company +tng)           ; the ultimate code completion backend
-       helm              ; the *other* search engine for love and life
+       ;;helm              ; the *other* search engine for love and life
        ;;ido             ; the other *other* search engine...
        ivy               ; a search engine for love and life
+       vertico          ; the search engine of the future
 
        :ui
        ;;deft            ; notational velocity for Emacs
@@ -35,18 +36,18 @@
        hl-todo           ; highlight TODO/FIXME/NOTE/DEPRECATED/HACK/REVIEW
        ;;hydra
        indent-guides       ; highlighted indent columns
-       (ligatures)         ; ligatures and symbols to make your code pretty again
+       ligatures          ; ligatures and symbols to make your code pretty again
 
        ;;minimap           ; show a map
        modeline          ; snazzy, Atom-inspired modeline, plus API
        ;;nav-flash         ; blink cursor line after big motions
-       neotree           ; a project drawer, like NERDTree for vim
+       ;;neotree           ; a project drawer, like NERDTree for vim
        ophints           ; highlight the region an operation acts on
        (popup +defaults)   ; tame sudden yet inevitable temporary windows
        ;;tabs              ; a tab bar for Emacs
        treemacs          ; a project drawer, like neotree but cooler
-       ;;unicode           ; extended unicode support for various languages
-       ;;vc-gutter         ; vcs diff in the fringe
+       unicode           ; extended unicode support for various languages
+       vc-gutter         ; vcs diff in the fringe
        vi-tilde-fringe   ; fringe tildes to mark beyond EOB
        ;;window-select     ; visually switch windows
        workspaces        ; tab emulation, persistence & separate workspaces
@@ -77,12 +78,12 @@
        ;;eshell            ; the elisp shell that works everywhere
        ;;shell             ; simple shell REPL for Emacs
        ;;term              ; basic terminal emulator for Emacs
-       vterm             ; the best terminal emulation in Emacs
+       ;;vterm             ; the best terminal emulation in Emacs
 
        :checkers
        syntax              ; tasing you for every semicolon you forget
-       (spell +flyspell)   ; tasing you for misspelling mispelling
-       grammar             ; tasing grammar mistake every you make
+       ;;(spell +flyspell)   ; tasing you for misspelling mispelling
+       ;;grammar             ; tasing grammar mistake every you make
 
        :tools
        ;;ansible
@@ -140,7 +141,7 @@
        (javascript +lsp)        ; all(hope(abandon(ye(who(enter(here))))))
        ;;julia             ; a better, faster MATLAB
        ;;kotlin            ; a better, slicker Java(Script)
-       ;;latex             ; writing papers in Emacs has never been so fun
+       latex             ; writing papers in Emacs has never been so fun
        ;;lean              ; for folks with too much to prove
        ;;ledger            ; be audit you can be
        ;;lua               ; one-based indices? one-based indices
@@ -152,7 +153,7 @@
        ;;php               ; perl's insecure younger brother
        ;;plantuml          ; diagrams for confusing people more
        ;;purescript        ; javascript, but functional
-       python            ; beautiful is better than ugly
+       (python +lsp-pyright)            ; beautiful is better than ugly
        ;;qt                ; the 'cutest' gui framework ever
        ;;racket            ; a DSL for DSLs
        ;;raku              ; the artist formerly known as perl6
@@ -168,7 +169,7 @@
        ;;swift             ; who asked for emoji variables?
        ;;terra             ; Earth and Moon in alignment for performance.
        web               ; the tubes
-       ;;yaml              ; JSON, but readable
+       yaml              ; JSON, but readable
        ;;zig               ; C, but simpler
 
        :email

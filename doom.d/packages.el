@@ -24,6 +24,9 @@
 (package! org-html-themify
   :recipe (:host github :repo "/DogLooksGood/org-html-themify"))
 
+(package! company-box
+  :recipe (:host github :repo "sebastiencs/company-box"))
+
 (package! wgsl-mode
   :recipe (:host github :repo "acowley/wgsl-mode" :files ("wgsl-mode.el")))
 
