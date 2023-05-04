@@ -35,8 +35,8 @@
 
 ;; They all accept either a font-spec, font string ("Input Mono-12"), or xlfd
 ;; font string. You generally only need these two:
-(setq doom-font (font-spec :family "Source Code Pro" :size 17 :weight 'regular)
-      doom-variable-pitch-font (font-spec :family "sans" :size 13))
+;(setq doom-font (font-spec :family "Source Code Pro" :size 17 :weight 'regular)
+;      doom-variable-pitch-font (font-spec :family "sans" :size 13))
 
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
@@ -77,7 +77,7 @@ multiple times. this may or may not be an issue."
                  "~/Library/Application Support/Screeps/scripts/ScreepsAutocomplete/"
                  (file-name-directory (buffer-file-name))))))
 
-(load! "extra/avr-asm-autodoc-mode.el")
+;; (load! "extra/avr-asm-autodoc-mode.el")
 ;; Here are some additional functions/macros that could help you configure Doom:
 ;;
 ;; - `load!' for loading external *.el files relative to this one

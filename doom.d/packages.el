@@ -8,8 +8,6 @@
 
 ;; To install SOME-PACKAGE from MELPA, ELPA or emacsmirror:
 ;(package! some-package)
-(package! ron-mode)
-(package! mips-mode)
 
 ;; To install a package directly from a remote git repo, you must specify a
 ;; `:recipe'. You'll find documentation on what `:recipe' accepts here:
@@ -17,18 +15,12 @@
 ;(package! another-package
 ;  :recipe (:host github :repo "username/repo"))
 
-;;(package! tern-mode
-;;  :recipe (:host github :repo "/ternjs/tern"
-;;           :files ("emacs/tern.el")))
 
 (package! org-html-themify
   :recipe (:host github :repo "/DogLooksGood/org-html-themify"))
 
 (package! company-box
   :recipe (:host github :repo "sebastiencs/company-box"))
-
-(package! wgsl-mode
-  :recipe (:host github :repo "acowley/wgsl-mode" :files ("wgsl-mode.el")))
 
 (package! lsp-grammarly
   :recipe (:host github :repo "emacs-grammarly/lsp-grammarly"))
