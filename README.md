@@ -1,5 +1,4 @@
-# dot_files
-all of my dot files
+A subset of my dot files and custom scripts
 
 # Doom Configuration
 for your doom configuration, add a symlink from the dot files in the doom.d to the files in the actual .doom.d
