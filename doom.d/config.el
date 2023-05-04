@@ -13,7 +13,7 @@
 (let ((dot-files-dir "~/dot_files/"))
   (require 'magit)
   (cd dot-files-dir)
-  (magit-fetch-from-upstream "https://github.com/ethanxxxl/dot_files" ""))
+  (magit-pull-from-upstream nil))
 
 ;; Doom exposes five (optional) variables for controlling fonts in Doom. Here
 ;; are the three important ones:
@@ -22,63 +22,28 @@
 ;; + `doom-variable-pitch-font'
 ;; + `doom-big-font' -- used for `doom-big-font-mode'; use this for
 ;;   presentations or streaming.
+;;
+;; They all accept either a font-spec, font string ("Input Mono-12"), or xlfd
+;; font string. You generally only need these two:
+(setq doom-font (font-spec :family "Source Code Pro" :size 17 :weight 'regular)
+      doom-variable-pitch-font (font-spec :family "sans" :size 13))
 
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
 (setq doom-theme 'doom-molokai)
-(add-hook 'prog-mode-hook 'display-fill-column-indicator-mode)
-
-;; This determines the style of line numbers in effect. If set to `nil', line
-;; numbers are disabled. For relative line numbers, set this to `relative'.
-(setq display-line-numbers-type 'visual)
-
-;; They all accept either a font-spec, font string ("Input Mono-12"), or xlfd
-;; font string. You generally only need these two:
-;(setq doom-font (font-spec :family "Source Code Pro" :size 17 :weight 'regular)
-;      doom-variable-pitch-font (font-spec :family "sans" :size 13))
 
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
 (setq org-directory "~/org/")
 
+(add-hook org-mode-hook (lambda () (+org-pretty-mode)))
 
-;; LSP configuration
-(setq gc-cons-threshold 1600000000)
-(setq read-process-output-max (* 1024 1024)) ;; 1mb
+;; This determines the style of line numbers in effect. If set to `nil', line
+;; numbers are disabled. For relative line numbers, set this to `relative'.
+(setq display-line-numbers-type 'visual)
 
-(setq lsp-ui-doc-enable t)
-(setq lsp-ui-doc-delay 0.5)
-(setq lsp-ui-doc-show-with-cursor t)
-(setq lsp-ui-doc-show-with-mouse t)
 
-;(add-hook 'lsp-mode-hook 'lsp-headerline-breadcrumb-mode)
-(setq lsp-headerline-breadcrumb-enable t)
-(setq lsp-headerline-breadcrumb-enable-symbol-numbers nil)
-(setq lsp-headerline-breadcrumb-icons-enable t)
-
-(add-hook 'rjsx-mode-hook
-          (lambda ()
-            "sets up auto-complete for screeps projects.
-
-Checks if rjsx-mode is being run in a screeps project. If so,
-then copy over the autocomplete files to the current directory.
-
-there is a potential problem, where, if there are multiple
-subdirectories, the autocomplete files will be copied over
-multiple times. this may or may not be an issue."
-
-            ; check if we are in a screeps project
-            (if (and (string-match "Screeps/scripts"
-                                   (file-name-directory (buffer-file-name)))
-                     (not (file-exists-p "ScreepsAutocomplete/")))
-                ;; we are in a screeps direcotry without .tern_mode
-                (copy-directory
-                 "~/Library/Application Support/Screeps/scripts/ScreepsAutocomplete/"
-                 (file-name-directory (buffer-file-name))))))
-
-;; (load! "extra/avr-asm-autodoc-mode.el")
-;; Here are some additional functions/macros that could help you configure Doom:
 ;;
 ;; - `load!' for loading external *.el files relative to this one
 ;; - `use-package!' for configuring packages
@@ -101,6 +66,14 @@ multiple times. this may or may not be an issue."
                        (require 'lsp-grammarly)
                        (lsp))))  ; or lsp-deferred
 
+;; LSP configuration
+(after! lsp-mode
+  (setq +lsp-company-backends
+        '(:separate company-capf company-yasnippet)))
+
+(setq gc-cons-threshold 1600000000)
+(setq read-process-output-max (* 1024 1024)) ;; 1mb
+
 (setq lsp-ui-sideline-show-code-actions t)
 (setq lsp-ui-sideline-show-hover t)
 (setq lsp-ui-sideline-show-diagnostics t)
@@ -111,6 +84,25 @@ multiple times. this may or may not be an issue."
 (setq lsp-ui-doc-use-webkit nil)
 (setq lsp-ui-doc-glance t)
 
+(add-hook 'rjsx-mode-hook
+          (lambda ()
+            "sets up auto-complete for screeps projects.
+
+Checks if rjsx-mode is being run in a screeps project. If so,
+then copy over the autocomplete files to the current directory.
+
+there is a potential problem, where, if there are multiple
+subdirectories, the autocomplete files will be copied over
+multiple times. this may or may not be an issue."
+
+            ; check if we are in a screeps project
+            (if (and (string-match "Screeps/scripts"
+                                   (file-name-directory (buffer-file-name)))
+                     (not (file-exists-p "ScreepsAutocomplete/")))
+                ;; we are in a screeps directory without the autocomplete files
+                (copy-directory
+                 "~/.config/Screeps/scripts/ScreepsAutocomplete/"
+                 (file-name-directory (buffer-file-name))))))
 
 (defun ethan-book-mode ()
   (interactive)
