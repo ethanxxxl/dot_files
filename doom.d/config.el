@@ -1,4 +1,4 @@
-;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
+;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
 ;; Place your private configuration here! Remember, you do not need to run 'doom
 ;; sync' after modifying this file!
@@ -13,69 +13,9 @@
 (let ((dot-files-dir "~/dot_files/"))
   (require 'magit)
   (cd dot-files-dir)
-  (magit-fetch-from-upstream "https://github.com/ethanxxxl/dot_files" ""))
+  (magit-fetch-from-upstream "https://github.com/ethanxxxl/dot_files" "")
+  (cd "~/"))
 
-;; Doom exposes five (optional) variables for controlling fonts in Doom. Here
-;; are the three important ones:
-;;
-;; + `doom-font'
-;; + `doom-variable-pitch-font'
-;; + `doom-big-font' -- used for `doom-big-font-mode'; use this for
-;;   presentations or streaming.
-
-;; There are two ways to load a theme. Both assume the theme is installed and
-;; available. You can either set `doom-theme' or manually load a theme with the
-;; `load-theme' function. This is the default:
-(setq doom-theme 'doom-molokai)
-(add-hook 'prog-mode-hook 'display-fill-column-indicator-mode)
-
-;; This determines the style of line numbers in effect. If set to `nil', line
-;; numbers are disabled. For relative line numbers, set this to `relative'.
-(setq display-line-numbers-type 'visual)
-
-;; They all accept either a font-spec, font string ("Input Mono-12"), or xlfd
-;; font string. You generally only need these two:
-;(setq doom-font (font-spec :family "Source Code Pro" :size 17 :weight 'regular)
-;      doom-variable-pitch-font (font-spec :family "sans" :size 13))
-
-;; If you use `org' and don't want your org files in the default location below,
-;; change `org-directory'. It must be set before org loads!
-(setq org-directory "~/org/")
-
-
-;; LSP configuration
-(setq gc-cons-threshold 1600000000)
-(setq read-process-output-max (* 1024 1024)) ;; 1mb
-
-(setq lsp-ui-doc-enable t)
-(setq lsp-ui-doc-delay 0.5)
-(setq lsp-ui-doc-show-with-cursor t)
-(setq lsp-ui-doc-show-with-mouse t)
-
-;(add-hook 'lsp-mode-hook 'lsp-headerline-breadcrumb-mode)
-(setq lsp-headerline-breadcrumb-enable t)
-(setq lsp-headerline-breadcrumb-enable-symbol-numbers nil)
-(setq lsp-headerline-breadcrumb-icons-enable t)
-
-(add-hook 'rjsx-mode-hook
-          (lambda ()
-            "sets up auto-complete for screeps projects.
-
-Checks if rjsx-mode is being run in a screeps project. If so,
-then copy over the autocomplete files to the current directory.
-
-there is a potential problem, where, if there are multiple
-subdirectories, the autocomplete files will be copied over
-multiple times. this may or may not be an issue."
-
-            ; check if we are in a screeps project
-            (if (and (string-match "Screeps/scripts"
-                                   (file-name-directory (buffer-file-name)))
-                     (not (file-exists-p "ScreepsAutocomplete/")))
-                ;; we are in a screeps direcotry without .tern_mode
-                (copy-directory
-                 "~/Library/Application Support/Screeps/scripts/ScreepsAutocomplete/"
-                 (file-name-directory (buffer-file-name))))))
 
 ;; (load! "extra/avr-asm-autodoc-mode.el")
 ;; Here are some additional functions/macros that could help you configure Doom:
@@ -94,6 +34,93 @@ multiple times. this may or may not be an issue."
 ;;
 ;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
 ;; they are implemented.
+;; Doom exposes five (optional) variables for controlling fonts in Doom. Here
+;; are the three important ones:
+;;
+;; + `doom-font'
+;; + `doom-variable-pitch-font'
+;; + `doom-big-font' -- used for `doom-big-font-mode'; use this for
+;;   presentations or streaming.
+
+;; There are two ways to load a theme. Both assume the theme is installed and
+;; available. You can either set `doom-theme' or manually load a theme with the
+;; `load-theme' function. This is the default:
+;; (setq doom-theme 'doom-molokai)
+(setq doom-theme 'doom-one-light)
+(add-hook 'prog-mode-hook 'display-fill-column-indicator-mode)
+
+;; This determines the style of line numbers in effect. If set to `nil', line
+;; numbers are disabled. For relative line numbers, set this to `relative'.
+(setq display-line-numbers-type 'visual)
+
+;; They all accept either a font-spec, font string ("Input Mono-12"), or xlfd
+;; font string. You generally only need these two:
+;(setq doom-font (font-spec :family "Source Code Pro" :size 17 :weight 'regular)
+;      doom-variable-pitch-font (font-spec :family "sans" :size 13))
+
+;; If you use `org' and don't want your org files in the default location below,
+;; change `org-directory'. It must be set before org loads!
+(setq org-directory "~/org/")
+
+;; learning list
+;; advising functions
+
+;; state variable for local publish function
+(setq org-publish-local-root nil)
+(defun org-publish-local-project (project-root)
+  "command to publish projects not listed in ~org-publish-project-alist~.
+
+This requrires the project alist to be defined as
+org-publish-local-alist in a file called export-config.el in the
+project root directory. When this command is called for the first
+time during a session, the user will be prompted to select the
+root directory for their project. This directory is remembered
+between calls"
+  (interactive (list (if org-publish-local-root org-publish-local-root
+                       (setq org-publish-local-root
+                             (read-directory-name "Select project root: " )))))
+
+  (let ((config-file (concat project-root "export-config.el")))
+    (when (file-exists-p config-file)
+      ;; file exists, so get the code from it
+      (require 'ox-publish)
+      (load config-file nil nil t)
+      (let (tmp-alist
+            (org-publish-use-timestamps-flag nil)
+            (buffer-directory (file-name-directory (buffer-file-name)))) ; force all files to be published
+        ;; the org-publish-expand-project function requires that
+        ;; org-publish-project-alist contain all projects. save the current
+        ;; value of org-publish-project-alist, and restore it after this
+        ;; function is ran.
+        (setq tmp-alist org-publish-project-alist)
+        (setq org-publish-project-alist org-publish-local-alist)
+
+        ;; publish all files in the project. NOTE: this might not actually work.
+        (cd org-publish-local-root)
+        (org-publish-projects org-publish-local-alist)
+        (cd buffer-directory)
+
+        ;; restore project-alist variable
+        (setq org-publish-project-alist tmp-alist)))))
+
+(add-hook
+ 'org-mode-hook
+ (lambda ()
+   (evil-define-key '(normal visual) org-mode-map (kbd "SPC m P l") #'org-publish-local-project)))
+
+
+;; LSP  Configuration
+(setq gc-cons-threshold 1600000000)
+(setq read-process-output-max (* 1024 1024)) ;; 1mb
+
+(setq lsp-ui-doc-delay 0.5)
+(setq lsp-ui-doc-show-with-cursor t)
+(setq lsp-ui-doc-show-with-mouse t)
+
+;(add-hook 'lsp-mode-hook 'lsp-headerline-breadcrumb-mode)
+(setq lsp-headerline-breadcrumb-enable t)
+(setq lsp-headerline-breadcrumb-enable-symbol-numbers nil)
+(setq lsp-headerline-breadcrumb-icons-enable t)
 
 (use-package lsp-grammarly
   :ensure t
@@ -111,6 +138,40 @@ multiple times. this may or may not be an issue."
 (setq lsp-ui-doc-use-webkit nil)
 (setq lsp-ui-doc-glance t)
 
+(defun import-screeps-autocomplete ()
+  "sets up auto-complete for screeps projects
+
+Checks if rjsx-mode is being run in a screeps project. If so,
+then copy over the autocomplete files to the current directory.
+
+there is a potential problem, where, if there are multiple
+subdirectories, the autocomplete files will be copied over
+multiple times. this may or may not be an issue."
+
+  (let* ((screeps-scripts (expand-file-name ; Screeps dir is different on my
+                           (cond            ; machines
+                            ((equal (system-name) "Ethans-Mac.local")
+                             "~/Library/Application Support/Screeps/scripts/")
+
+                            ((equal (system-name) "arch-desktop")
+                             "~/.config/Screeps/scripts/")
+
+                            (t
+                             "~/Screeps/"))))
+
+         (autocomplete (concat screeps-scripts "ScreepsAutocomplete/")))
+
+    ;; check if we are in a screeps project
+    (when (and (string-prefix-p screeps-scripts (buffer-file-name)) ; are we in the screeps dir?
+               (not (file-exists-p "ScreepsAutocomplete/"))) ; are we missing the autocomplete file?
+
+      ;; copy autocomplete files to current directory
+      (copy-directory autocomplete (file-name-directory (buffer-file-name)))
+      (message "copying ScreepsAutocomplete..."))))
+
+(add-hook 'rjsx-mode-hook 'import-screeps-autocomplete)
+
+
 
 (defun ethan-book-mode ()
   (interactive)
@@ -121,8 +182,8 @@ and centers the window."
   (let ((margin-size (/ (- (window-total-width) size) 2)))
     (set-window-margins (selected-window) margin-size margin-size)
     (variable-pitch-mode)
-    (set-face-attribute  'line-number nil
-                         :family "Ubuntu Mono")
+    (set-face-attribute 'line-number nil
+                        :family "Ubuntu Mono")
     (set-face-attribute 'line-number-current-line nil
                         :family "Ubuntu Mono")
     (set-face-attribute 'variable-pitch nil
