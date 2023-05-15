@@ -9,14 +9,6 @@
 (setq user-full-name "Ethan Smith"
       user-mail-address "ethansmith.dev@gmail.com")
 
-;; pull changes from remote directory.
-(let ((dot-files-dir "~/dot_files/"))
-  (require 'magit)
-  (cd dot-files-dir)
-  (magit-fetch-from-upstream "https://github.com/ethanxxxl/dot_files" "")
-  (cd "~/"))
-
-
 ;; (load! "extra/avr-asm-autodoc-mode.el")
 ;; Here are some additional functions/macros that could help you configure Doom:
 ;;
@@ -45,8 +37,17 @@
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
-;; (setq doom-theme 'doom-molokai)
-(setq doom-theme 'doom-one-light)
+
+(setq doom-theme
+      (cond
+       ((equal (system-name) "Ethans-Mac.local")
+        'doom-one-light)
+
+       ((equal (system-name) "arch-desktop")
+        'doom-molokai)
+
+       t 'doom-one-light))
+
 (add-hook 'prog-mode-hook 'display-fill-column-indicator-mode)
 
 ;; This determines the style of line numbers in effect. If set to `nil', line
@@ -86,8 +87,19 @@ between calls"
       (require 'ox-publish)
       (load config-file nil nil t)
       (let (tmp-alist
-            (org-publish-use-timestamps-flag nil)
-            (buffer-directory (file-name-directory (buffer-file-name)))) ; force all files to be published
+            (buffer-directory (file-name-directory (buffer-file-name))))
+
+        (setq org-publish-use-timestamps-flag nil)
+        (dolist (project org-publish-local-alist)
+          (when-let* ((props (cdr project))
+                      (_ (plist-member props :base-directory)))
+            (plist-put props :base-directory
+                       (expand-file-name (plist-get props :base-directory)
+                                         org-publish-local-root))
+            (plist-put props :publishing-directory
+                       (expand-file-name (plist-get props :publishing-directory)
+                                         org-publish-local-root))))
+
         ;; the org-publish-expand-project function requires that
         ;; org-publish-project-alist contain all projects. save the current
         ;; value of org-publish-project-alist, and restore it after this
@@ -95,8 +107,7 @@ between calls"
         (setq tmp-alist org-publish-project-alist)
         (setq org-publish-project-alist org-publish-local-alist)
 
-        ;; publish all files in the project. NOTE: this might not actually work.
-        (cd org-publish-local-root)
+
         (org-publish-projects org-publish-local-alist)
         (cd buffer-directory)
 
