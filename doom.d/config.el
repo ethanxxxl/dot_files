@@ -119,6 +119,11 @@ between calls"
  (lambda ()
    (evil-define-key '(normal visual) org-mode-map (kbd "SPC m P l") #'org-publish-local-project)))
 
+(add-hook
+ 'css-mode-hook
+ (lambda ()
+   (evil-define-key '(normal visual) org-mode-map (kbd "SPC m P l") #'org-publish-local-project)))
+
 
 ;; LSP  Configuration
 (setq gc-cons-threshold 1600000000)
