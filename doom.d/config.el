@@ -38,15 +38,17 @@
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
 
-(setq doom-theme
-      (cond
-       ((equal (system-name) "Ethans-Mac.local")
-        'doom-one-light)
+;; (setq doom-theme
+;;       (cond
+;;        ((equal (system-name) "Ethans-Mac.local")
+;;         'doom-one-light)
 
-       ((equal (system-name) "arch-desktop")
-        'doom-molokai)
+;;        ((equal (system-name) "arch-desktop")
+;;         'doom-molokai)
 
-       t 'doom-one-light))
+;;        t 'doom-one-light))
+
+(setq doom-theme 'doom-molokai)
 
 (add-hook 'prog-mode-hook 'display-fill-column-indicator-mode)
 
@@ -123,6 +125,43 @@ between calls"
  'css-mode-hook
  (lambda ()
    (evil-define-key '(normal visual) org-mode-map (kbd "SPC m P l") #'org-publish-local-project)))
+
+;; disabling evil in certain modes
+(evil-define-key '(emacs) Info-mode-map (kbd "SPC") 'evil-scroll-down)
+(evil-define-key '(emacs) Info-mode-map (kbd "DEL") 'evil-scroll-up)
+
+(add-hook 'Info-mode-hook (lambda ()
+                            (evil-set-initial-state 'Info-mode 'emacs)))
+(evil-set-initial-state 'magit-mode 'emacs)
+
+(require 'info)
+(setq Info-directory-list
+      (cons (expand-file-name "/home/ethan/quicklisp")
+            Info-directory-list))
+
+;;
+;; lisp stuff
+;;
+(add-hook 'lisp-mode-hook 'smartparens-mode nil t)
+
+(defun smartparens-add-custom-keybinds ()
+  (evil-define-key '(normal insert visual) 'smartparens-mode-map (kbd "M-l") #'sp-beginning-of-next-sexp)
+
+  (evil-define-key '(normal insert visual) 'smartparens-mode-map (kbd "M-l") #'sp-beginning-of-next-sexp)
+  (evil-define-key '(normal insert visual) 'smartparens-mode-map (kbd "M-h") #'sp-beginning-of-previous-sexp)
+  (evil-define-key '(normal insert visual) 'smartparens-mode-map (kbd "C-l") #'lispyville-forward-atom-begin)
+  (evil-define-key '(normal insert visual) 'smartparens-mode-map (kbd "C-h") #'lispyville-backward-atom-end)
+
+  (evil-define-key '(normal insert visual) 'smartparens-mode-map (kbd "M-k") #'sp-backward-up-sexp)
+  (evil-define-key '(normal insert visual) 'smartparens-mode-map (kbd "M-j") #'sp-down-sexp)
+
+  (evil-define-key '(normal) 'smartparens-mode-map (kbd "C-M-l") #'lispyville-drag-forward)
+  (evil-define-key '(normal) 'smartparens-mode-map (kbd "C-M-h") #'lispyville-drag-backward)
+  (evil-define-key '(normal) 'smartparens-mode-map (kbd "C-M-k") #'lispyville-raise-list)
+
+  (evil-define-key '(normal insert visual) 'smartparens-mode-map (kbd "C-x n s") #'sp-narrow-to-sexp))
+
+(add-hook 'smartparens-mode-hook #'smartparens-add-custom-keybinds)
 
 
 ;; LSP  Configuration
