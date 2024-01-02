@@ -3,79 +3,46 @@
 #+DESCRIPTION: Ethan's personal Emacs config.
 #+STARTUP: Overview
 
-* General Keybindings
-  These are keybindings which I use everywhere all the time.
-  #+begin_src elisp
-    (defun ethan-open-config ()
-      (interactive)
-      (find-file "~/.config/emacs/config.org"))
-    (keymap-global-set "C-c p" 'ethan-open-config)
-    (keymap-global-set "C-c t" 'treemacs)
-    ;; (keymap-global-set "C-c b" )
-
-    (require 'misc)
-
-    (defun es-swap-window (&optional current-window)
-      (interactive)
-      (let* ((win (or current-window
-		      (window-child (window-parent (selected-window)))))
-	     (buf (window-buffer win))
-	     (next-win (window-next-sibling win))
-	     (next-buf (window-buffer next-win)))
-	(when next-win
-	  (set-window-buffer win next-buf)
-	  (set-window-buffer next-win buf)
-	  (es-swap-window next-win))))
-
-    (keymap-global-set "C-c w" 'es-swap-window)
-
-    ;; make scrolling much more sensible
-    (keymap-global-set "C-v" 'View-scroll-half-page-forward)
-    (keymap-global-set "M-v" 'View-scroll-half-page-backward)
-  #+end_src
-
-  
-
 * Package Manager (elpaca)
-I just copied this from the elpaca repository
-#+begin_src elisp
-  (defvar elpaca-installer-version 0.6)
-  (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
-  (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
-  (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
-  (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-				:ref nil
-				:files (:defaults "elpaca-test.el" (:exclude "extensions"))
-				:build (:not elpaca--activate-package)))
-  (let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
-	 (build (expand-file-name "elpaca/" elpaca-builds-directory))
-	 (order (cdr elpaca-order))
-	 (default-directory repo))
-    (add-to-list 'load-path (if (file-exists-p build) build repo))
-    (unless (file-exists-p repo)
-      (make-directory repo t)
-      (when (< emacs-major-version 28) (require 'subr-x))
-      (condition-case-unless-debug err
-	  (if-let ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
-		   ((zerop (call-process "git" nil buffer t "clone"
-					 (plist-get order :repo) repo)))
-		   ((zerop (call-process "git" nil buffer t "checkout"
-					 (or (plist-get order :ref) "--"))))
-		   (emacs (concat invocation-directory invocation-name))
-		   ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
-					 "--eval" "(byte-recompile-directory \".\" 0 'force)")))
-		   ((require 'elpaca))
-		   ((elpaca-generate-autoloads "elpaca" repo)))
-	      (progn (message "%s" (buffer-string)) (kill-buffer buffer))
-	    (error "%s" (with-current-buffer buffer (buffer-string))))
-	((error) (warn "%s" err) (delete-directory repo 'recursive))))
-    (unless (require 'elpaca-autoloads nil t)
-      (require 'elpaca)
-      (elpaca-generate-autoloads "elpaca" repo)
-      (load "./elpaca-autoloads")))
-  (add-hook 'after-init-hook #'elpaca-process-queues)
-  (elpaca `(,@elpaca-order))
-#+end_src
+  I just copied this from the elpaca repository
+  #+begin_src elisp
+    (defvar elpaca-installer-version 0.6)
+    (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+    (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+    (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
+    (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+                                  :ref nil
+                                  :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+                                  :build (:not elpaca--activate-package)))
+    (let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
+           (build (expand-file-name "elpaca/" elpaca-builds-directory))
+           (order (cdr elpaca-order))
+           (default-directory repo))
+      (add-to-list 'load-path (if (file-exists-p build) build repo))
+      (unless (file-exists-p repo)
+        (make-directory repo t)
+        (when (< emacs-major-version 28) (require 'subr-x))
+        (condition-case-unless-debug err
+            (if-let ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                     ((zerop (call-process "git" nil buffer t "clone"
+                                           (plist-get order :repo) repo)))
+                     ((zerop (call-process "git" nil buffer t "checkout"
+                                           (or (plist-get order :ref) "--"))))
+                     (emacs (concat invocation-directory invocation-name))
+                     ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                           "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                     ((require 'elpaca))
+                     ((elpaca-generate-autoloads "elpaca" repo)))
+                (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+              (error "%s" (with-current-buffer buffer (buffer-string))))
+          ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+      (unless (require 'elpaca-autoloads nil t)
+        (require 'elpaca)
+        (elpaca-generate-autoloads "elpaca" repo)
+        (load "./elpaca-autoloads")))
+    (add-hook 'after-init-hook #'elpaca-process-queues)
+    (elpaca `(,@elpaca-order))
+   #+end_src
 
 #+RESULTS:
 
@@ -147,13 +114,19 @@ I just copied this from the elpaca repository
    #+begin_src elisp
      (use-package ac-helm
        :init (helm-mode 1)
-       :ensure t)
-
-     (global-set-key (kbd "M-x") 'helm-M-x)
-     (global-set-key (kbd "C-x C-f") 'helm-find-files)
-     (global-set-key (kbd "C-x C-b") 'helm-buffers-list)
-     (global-set-key (kbd "M-g i") 'helm-imenu)
-   #+end_src
+       :ensure t
+       :config 
+       (setf helm-window-prefer-horizontal-split t) 
+       (global-set-key (kbd "M-x") 'helm-M-x)
+       (global-set-key (kbd "C-x C-f") 'helm-find-files)
+       (global-set-key (kbd "C-x C-b") 'helm-buffers-list)
+       (global-set-key (kbd "M-g i") 'helm-imenu)
+       (setf helm-display-header-line nil)
+       (set-face-attribute 'helm-source-header nil :height 0.9)
+       (helm-autoresize-mode 1)
+       (setf helm-split-window-in-side-p t)
+       (setf helm-always-two-windows t))
+    #+end_src
 
    #+RESULTS:
    
@@ -190,6 +163,9 @@ I just copied this from the elpaca repository
 ** magit
    #+begin_src elisp
      (use-package magit
+       :ensure t)
+
+     (use-package seq
        :ensure t)
    #+end_src
 ** TODO ibuffer
@@ -253,8 +229,8 @@ I just copied this from the elpaca repository
 			    (lsp))))  ; or lsp-deferred
 
      (setq lsp-ui-sideline-show-code-actions t)
-     (setq lsp-ui-sideline-show-hover t)
-     (setq lsp-ui-sideline-show-diagnostics nil)
+     (setq lsp-ui-sideline-show-hover nil)
+     (setq lsp-ui-sideline-show-diagnostics t)
      (setq lsp-ui-doc-enable t)
      (setq lsp-ui-doc-show-with-cursor t)
      (setq lsp-ui-doc-show-with-mouse nil)
@@ -276,6 +252,8 @@ I just copied this from the elpaca repository
        :ensure t
        :hook (rust-mode . #'prettify-symbols-mode))
    #+end_src
+
+   
 
 ** comment-tags
    #+begin_src elisp
@@ -308,8 +286,28 @@ I just copied this from the elpaca repository
 	;; Corrects (and improves) org-mode's native fontification.
 	(doom-themes-org-config))
     #+end_src
-   
-* GUI Tweaks
+** indent-bars
+   There is an optional stipple mode that can provide potentially better looking indent bars, if your particular build of emacs supports it. I have it disabled for now. This package also uses emacs treesit to determine where the indentations should go. however, *you need to install the language grammar for any language you want to support with this* use ~treesit-install-language-grammar~
+#+begin_src elisp
+  (use-package indent-bars
+    :elpaca (:host github :repo "jdtsmith/indent-bars")
+    :ensure t
+    :hook (prog-mode . indent-bars-mode)
+    :config
+    (setf indent-bars-prefer-character t
+          indent-bars-no-stipple-char ?│
+          indent-bars-treesit-support t
+          indent-bars-treesit-ignore-wrap t
+          indent-bars-treesit-ignore-blank-lines-types t
+          indent-bars-no-descent-string t
+          )
+    )
+#+end_src
+
+#+RESULTS:
+
+* Major Modes
+** general
   #+begin_src elisp
     (global-display-line-numbers-mode 1)
     (global-visual-line-mode t)
@@ -320,19 +318,27 @@ I just copied this from the elpaca repository
     (fringe-mode 0)
     (window-divider-mode t)
 
-    (set-fill-column 80)
     (global-display-fill-column-indicator-mode t)
 
     (tab-bar-mode t)
-  #+end_src
 
-* Major Modes
-** general
+    (menu-bar--display-line-numbers-mode-relative)
+    (indent-tabs-mode nil)
+
+    (setq make-backup-files nil)
+    (recentf-mode)
+   #+end_src
+
+   There are some general options that can only be applied via hooks for each
+   buffer. The following section sets these options for the base-derived
+   modes. (except ~special-mode~)
    #+begin_src elisp
-     (menu-bar--display-line-numbers-mode-relative)
-     (indent-tabs-mode nil)
-     (set-fill-column 80)
-     (setq make-backup-files nil)
+     (defun es/buffer-opts ()
+       (set-fill-column 80)
+       (indent-tabs-mode -1))
+
+     (add-hook 'prog-mode-hook #'es/buffer-opts)
+     (add-hook 'text-mode-hook #'es/buffer-opts)
    #+end_src
 ** org-mode
    #+begin_src elisp
@@ -341,13 +347,16 @@ I just copied this from the elpaca repository
      (use-package org-bullets
        :init (add-hook 'org-mode-hook 'org-bullets-mode))
    #+end_src
-
+   
    
 ** prog-mode
    these are general options I want set for all programming modes
 
    #+begin_src elisp
-     ;(add-hook prog-mode-hook #'comment-tags-mode)
+     (defun es/prog-mode-opts ()
+	 (set-fill-column 80))
+
+     (add-hook 'prog-mode-hook #'es/prog-mode-opts)
    #+end_src
 ** c-mode
    #+begin_src elisp
@@ -356,6 +365,7 @@ I just copied this from the elpaca repository
 
      (add-hook 'c-mode-hook #'ethan-c-settings)
    #+end_src
+
 ** lisp-mode
    #+begin_src elisp
      (keymap-global-set "C->" 'sp-slurp-hybrid-sexp)
@@ -373,4 +383,41 @@ I just copied this from the elpaca repository
      (add-hook 'sly-mrepl-mode-hook #'ethan-sly-keybinds)
      (add-hook 'lisp-mode-hook #'ethan-lisp-keybinds)
    #+end_src
-   
+
+* General Keybindings
+  These are keybindings which I use everywhere all the time.
+  #+begin_src elisp
+    (defun ethan-open-config ()
+      (interactive)
+      (find-file "~/.config/emacs/config.org"))
+    (keymap-global-set "C-c p" 'ethan-open-config)
+    (keymap-global-set "C-c t" 'treemacs)
+    ;; (keymap-global-set "C-c b" )
+
+    (require 'misc)
+
+    (defun es-swap-window (&optional current-window)
+      (interactive)
+      (let* ((win (or current-window
+                      (window-child (window-parent (selected-window)))))
+             (buf (window-buffer win))
+             (next-win (window-next-sibling win))
+             (next-buf (window-buffer next-win)))
+        (when next-win
+          (set-window-buffer win next-buf)
+          (set-window-buffer next-win buf)
+          (es-swap-window next-win))))
+
+    (keymap-global-set "C-c w" 'es-swap-window)
+
+    ;; make scrolling much more sensible
+    (keymap-global-set "C-v" 'View-scroll-half-page-forward)
+    (keymap-global-set "M-v" 'View-scroll-half-page-backward)
+
+    (keymap-global-set "C-x ," #'helm-recentf)
+    (keymap-global-set "C-c h" #'helm-google-suggest)
+
+    ;; wrapping things in parentheses, quotes, etc
+    
+  #+end_src
+
