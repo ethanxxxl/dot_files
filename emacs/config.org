@@ -186,12 +186,15 @@
        :init
        ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
        (setq lsp-keymap-prefix "C-c l")
+       (keymap-global-set "<f12>" #'lsp-find-definition)
        :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
-	      (c-mode . lsp)
-	      (rust-mode . lsp)
-	      ;; if you want which-key integration
-	      (lsp-mode . lsp-enable-which-key-integration))
+              (c-mode . lsp)
+              (rust-mode . lsp)
+              ;; if you want which-key integration
+              (lsp-mode . lsp-enable-which-key-integration))
        :commands lsp)
+
+     (add-hook 'prog-mode-hook #'es/prog-mode-opts)
 
      ;; optionally
      (use-package lsp-ui :commands lsp-ui-mode)
@@ -207,8 +210,7 @@
      (use-package dap-mode)
   #+end_src
 
-   LSP options which make life nicer.
-
+   LSP options that make life nicer:
    #+begin_src elisp
      (setq gc-cons-threshold 160000000)
      (setq read-process-output-max (* 1024 1024)) ;; 1mb
@@ -253,8 +255,6 @@
        :hook (rust-mode . #'prettify-symbols-mode))
    #+end_src
 
-   
-
 ** comment-tags
    #+begin_src elisp
      (use-package comment-tags
@@ -266,6 +266,7 @@
        (prog-mode . comment-tags-mode)
        (c-mode    . comment-tags-mode))
    #+end_src
+
 ** doom-themes
     #+begin_src elisp
       (use-package doom-themes
@@ -286,47 +287,49 @@
 	;; Corrects (and improves) org-mode's native fontification.
 	(doom-themes-org-config))
     #+end_src
-** indent-bars
-   There is an optional stipple mode that can provide potentially better looking indent bars, if your particular build of emacs supports it. I have it disabled for now. This package also uses emacs treesit to determine where the indentations should go. however, *you need to install the language grammar for any language you want to support with this* use ~treesit-install-language-grammar~
-#+begin_src elisp
-  (use-package indent-bars
-    :elpaca (:host github :repo "jdtsmith/indent-bars")
-    :ensure t
-    :hook (prog-mode . indent-bars-mode)
-    :config
-    (setf indent-bars-prefer-character t
-          indent-bars-no-stipple-char ?│
-          indent-bars-treesit-support t
-          indent-bars-treesit-ignore-wrap t
-          indent-bars-treesit-ignore-blank-lines-types t
-          indent-bars-no-descent-string t
-          )
-    )
-#+end_src
 
-#+RESULTS:
+** indent-bars
+   There is an optional stipple mode that can provide potentially better looking
+   indent bars, if your particular build of emacs supports it. I have it
+   disabled for now. This package also uses emacs treesit to determine where the
+   indentations should go. however, *you need to install the language grammar
+   for any language you want to support with this* use
+   ~treesit-install-language-grammar~
+   #+begin_src elisp
+     (use-package indent-bars
+       :elpaca (:host github :repo "jdtsmith/indent-bars")
+       :ensure t
+       :hook (prog-mode . indent-bars-mode)
+       :config
+       (setf indent-bars-prefer-character t
+             indent-bars-no-stipple-char ?│
+             indent-bars-treesit-support t
+             indent-bars-treesit-ignore-wrap t
+             indent-bars-treesit-ignore-blank-lines-types t
+             indent-bars-no-descent-string t))
+    #+end_src
 
 * Major Modes
 ** general
-  #+begin_src elisp
-    (global-display-line-numbers-mode 1)
-    (global-visual-line-mode t)
+   #+begin_src elisp
+     (global-display-line-numbers-mode 1)
+     (global-visual-line-mode t)
 
-    (menu-bar-mode -1)
-    (scroll-bar-mode -1)
-    (tool-bar-mode -1)
-    (fringe-mode 0)
-    (window-divider-mode t)
+     (menu-bar-mode -1)
+     (scroll-bar-mode -1)
+     (tool-bar-mode -1)
+     (fringe-mode 0)
+     (window-divider-mode t)
 
-    (global-display-fill-column-indicator-mode t)
+     (global-display-fill-column-indicator-mode t)
 
-    (tab-bar-mode t)
+     (tab-bar-mode t)
 
-    (menu-bar--display-line-numbers-mode-relative)
-    (indent-tabs-mode nil)
+     (menu-bar--display-line-numbers-mode-relative)
+     (indent-tabs-mode nil)
 
-    (setq make-backup-files nil)
-    (recentf-mode)
+     (setq make-backup-files nil)
+     (recentf-mode)
    #+end_src
 
    There are some general options that can only be applied via hooks for each
@@ -336,34 +339,48 @@
      (defun es/buffer-opts ()
        (set-fill-column 80)
        (indent-tabs-mode -1))
-
-     (add-hook 'prog-mode-hook #'es/buffer-opts)
+            (add-hook 'prog-mode-hook #'es/buffer-opts)
      (add-hook 'text-mode-hook #'es/buffer-opts)
    #+end_src
 ** org-mode
    #+begin_src elisp
      (setf org-adapt-indentation t)
-
-     (use-package org-bullets
-       :init (add-hook 'org-mode-hook 'org-bullets-mode))
+           (use-package org-bullets
+        :init (add-hook 'org-mode-hook 'org-bullets-mode))
    #+end_src
-   
    
 ** prog-mode
    these are general options I want set for all programming modes
-
    #+begin_src elisp
      (defun es/prog-mode-opts ()
-	 (set-fill-column 80))
-
+           (set-fill-column 80)
+           (setf tab-width 4))
      (add-hook 'prog-mode-hook #'es/prog-mode-opts)
    #+end_src
+
 ** c-mode
    #+begin_src elisp
-     (defun ethan-c-settings ()
-       (setf c-basic-offset 4))
+     (setf c-basic-offset 4)
+     (eval-after-load "cc-mode"
+       '(define-key c-mode-base-map (kbd "RET") 'c-context-line-break))
 
-     (add-hook 'c-mode-hook #'ethan-c-settings)
+     (defun es/c-settings ())
+     (add-hook 'c-mode-hook #'es/c-settings)
+     (add-hook 'c-mode-common-hook (lambda () (treesit-parser-create 'c)))
+   #+end_src
+   
+** asm-mode
+   #+begin_src elisp
+     (defun es/asm-arm ()
+       (message "asm-mode formatting for gnu-as ARM")
+       (setf comment-start " // ")
+       (setf asm-comment-char ?/))
+
+     (add-hook 'asm-mode-hook #'es/asm-arm)
+   #+end_src
+** rust-mode
+   #+begin_src elisp
+     (add-hook 'rust-mode-hook (lambda () (treesit-parser-create 'rust)))
    #+end_src
 
 ** lisp-mode
@@ -371,20 +388,28 @@
      (keymap-global-set "C->" 'sp-slurp-hybrid-sexp)
      (keymap-global-set "C-<" 'sp-forward-barf-sexp)
 
-     (defun ethan-sly-keybinds ()
+     (defun es/sly-keybinds ()
        (interactive)
        (keymap-set sly-mrepl-mode-map "C-M-p" 'sly-mrepl-previous-prompt)
        (keymap-set sly-mrepl-mode-map "C-M-n" 'sly-mrepl-next-prompt))
 
-     (defun ethan-lisp-keybinds ()
+     (defun es/lisp-keybinds ()
        (interactive)
        (keymap-set lisp-mode-map "C-k" 'sp-kill-hybrid-sexp))
 
-     (add-hook 'sly-mrepl-mode-hook #'ethan-sly-keybinds)
-     (add-hook 'lisp-mode-hook #'ethan-lisp-keybinds)
+     (add-hook 'sly-mrepl-mode-hook #'es/sly-keybinds)
+     (add-hook 'lisp-mode-hook #'es/lisp-keybinds)
    #+end_src
 
-* General Keybindings
+** makefile-mode
+   #+begin_src elisp
+     (defun es/makefile-mode ()
+       (indent-tabs-mode t))
+
+     (add-hook 'makefile-gmake-mode-hook #'es/makefile-mode)
+   #+end_src
+
+* TODO General Keybindings
   These are keybindings which I use everywhere all the time.
   #+begin_src elisp
     (defun ethan-open-config ()
@@ -418,6 +443,5 @@
     (keymap-global-set "C-c h" #'helm-google-suggest)
 
     ;; wrapping things in parentheses, quotes, etc
-    
-  #+end_src
 
+  #+end_src
