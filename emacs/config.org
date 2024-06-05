@@ -6,96 +6,72 @@
 * Package Manager (elpaca)
   I just copied this from the elpaca repository
   #+begin_src elisp
-    (defvar elpaca-installer-version 0.6)
+    (defvar elpaca-installer-version 0.7)
     (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
     (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
     (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
     (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-                                  :ref nil
-                                  :files (:defaults "elpaca-test.el" (:exclude "extensions"))
-                                  :build (:not elpaca--activate-package)))
+				  :ref nil :depth 1
+				  :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+				  :build (:not elpaca--activate-package)))
     (let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
-           (build (expand-file-name "elpaca/" elpaca-builds-directory))
-           (order (cdr elpaca-order))
-           (default-directory repo))
+	   (build (expand-file-name "elpaca/" elpaca-builds-directory))
+	   (order (cdr elpaca-order))
+	   (default-directory repo))
       (add-to-list 'load-path (if (file-exists-p build) build repo))
       (unless (file-exists-p repo)
-        (make-directory repo t)
-        (when (< emacs-major-version 28) (require 'subr-x))
-        (condition-case-unless-debug err
-            (if-let ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
-                     ((zerop (call-process "git" nil buffer t "clone"
-                                           (plist-get order :repo) repo)))
-                     ((zerop (call-process "git" nil buffer t "checkout"
-                                           (or (plist-get order :ref) "--"))))
-                     (emacs (concat invocation-directory invocation-name))
-                     ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
-                                           "--eval" "(byte-recompile-directory \".\" 0 'force)")))
-                     ((require 'elpaca))
-                     ((elpaca-generate-autoloads "elpaca" repo)))
-                (progn (message "%s" (buffer-string)) (kill-buffer buffer))
-              (error "%s" (with-current-buffer buffer (buffer-string))))
-          ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+	(make-directory repo t)
+	(when (< emacs-major-version 28) (require 'subr-x))
+	(condition-case-unless-debug err
+	    (if-let ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+		     ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+						     ,@(when-let ((depth (plist-get order :depth)))
+							 (list (format "--depth=%d" depth) "--no-single-branch"))
+						     ,(plist-get order :repo) ,repo))))
+		     ((zerop (call-process "git" nil buffer t "checkout"
+					   (or (plist-get order :ref) "--"))))
+		     (emacs (concat invocation-directory invocation-name))
+		     ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+					   "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+		     ((require 'elpaca))
+		     ((elpaca-generate-autoloads "elpaca" repo)))
+		(progn (message "%s" (buffer-string)) (kill-buffer buffer))
+	      (error "%s" (with-current-buffer buffer (buffer-string))))
+	  ((error) (warn "%s" err) (delete-directory repo 'recursive))))
       (unless (require 'elpaca-autoloads nil t)
-        (require 'elpaca)
-        (elpaca-generate-autoloads "elpaca" repo)
-        (load "./elpaca-autoloads")))
+	(require 'elpaca)
+	(elpaca-generate-autoloads "elpaca" repo)
+	(load "./elpaca-autoloads")))
     (add-hook 'after-init-hook #'elpaca-process-queues)
     (elpaca `(,@elpaca-order))
-   #+end_src
+  #+end_src
 
-#+RESULTS:
+  *ENABLE USE-PACKAGE SUPPORT FOR ELPACA*
+  #+begin_src elisp
+    ;; Install use-package support
+    (elpaca elpaca-use-package
+      ;; Enable :elpaca use-package keyword.
+      (elpaca-use-package-mode))
+    (setq use-package-always-ensure t)
+
+    ;; Block until current queue processed.
+    (elpaca-wait)
+
+    ;;When installing a package which modifies a form used at the top-level
+    ;;(e.g. a package which adds a use-package key word),
+    ;;use `elpaca-wait' to block until that package has been installed/configured.
+    ;;For example:
+    ;;(use-package general :demand t)
+    ;;(elpaca-wait)
+
+    ;;Turns off elpaca-use-package-mode current declaration
+    ;;Note this will cause the declaration to be interpreted immediately (not deferred).
+    ;;Useful for configuring built-in emacs features.
+    (use-package emacs :ensure nil :config (setq ring-bell-function #'ignore))
+  #+end_src
 
 
-*ENABLE USE-PACKAGE SUPPORT FOR ELPACA*
-#+begin_src elisp
-  ;; Install use-package support
-  (elpaca elpaca-use-package
-    ;; Enable :elpaca use-package keyword.
-    (elpaca-use-package-mode)
-    ;; Assume :elpaca t unless otherwise specified.
-    (setq elpaca-use-package-by-default t))
-
-  ;; Block until current queue processed.
-  (elpaca-wait)
-
-  ;;When installing a package which modifies a form used at the top-level
-  ;;(e.g. a package which adds a use-package key word),
-  ;;use `elpaca-wait' to block until that package has been installed/configured.
-  ;;For example:
-  ;;(use-package general :demand t)
-  ;;(elpaca-wait)
-
-  ;;Turns off elpaca-use-package-mode current declaration
-  ;;Note this will cause the declaration to be interpreted immediately (not deferred).
-  ;;Useful for configuring built-in emacs features.
-  (use-package emacs :elpaca nil :config (setq ring-bell-function #'ignore))
-
-  ;; Don't install anything. Defer execution of BODY
-  (elpaca nil (message "deferred"))
-#+end_src
-
-#+RESULTS:
-
-* Packages
-** which-key
-   #+begin_src elisp
-     (use-package which-key
-       :init (which-key-mode 1)
-       :config
-       (setq which-key-side-window-location 'bottom
-	     which-key-sort-order #'which-key-key-order-alpha
-	     which-key-add-column-padding 1
-	     which-key-max-display-columns nil
-	     which-key-min-display-lines 6
-	     which-key-side-window-slot -10
-	     which-key-window-max-height 0.25
-	     which-key-idle-delay 0.4
-	     which-key-max-description-length 25
-	     which-key-allow-imprecise-window-fit t
-	     which-key-separator "  " ))
-    #+end_src
-
+* Misc Packages
 ** doom-modeline
    #+begin_src elisp
      (use-package doom-modeline
@@ -110,162 +86,6 @@
      (setq doom-modeline-lsp t)
    #+end_src
     
-** helm
-   #+begin_src elisp
-     (use-package ac-helm
-       :init (helm-mode 1)
-       :ensure t
-       :config 
-       (setf helm-window-prefer-horizontal-split t) 
-       (global-set-key (kbd "M-x") 'helm-M-x)
-       (global-set-key (kbd "C-x C-f") 'helm-find-files)
-       (global-set-key (kbd "C-x C-b") 'helm-buffers-list)
-       (global-set-key (kbd "M-g i") 'helm-imenu)
-       (setf helm-display-header-line nil)
-       (set-face-attribute 'helm-source-header nil :height 0.9)
-       (helm-autoresize-mode 1)
-       (setf helm-split-window-in-side-p t)
-       (setf helm-always-two-windows t))
-    #+end_src
-
-   #+RESULTS:
-   
-** company
-   #+begin_src elisp
-     (use-package company
-       :ensure t
-       :hook (after-init-hook . global-company-mode))
-   #+end_src
-
-** consult
-   #+begin_src elisp
-     (use-package consult)
-   #+end_src
-
-
-** treemacs
-   #+begin_src elisp
-     (use-package treemacs
-       :ensure t
-       :defer t)
-   #+end_src
-** nerd-icons
-   #+begin_src elisp
-     (use-package nerd-icons
-       :ensure t)
-
-     (use-package all-the-icons
-       :ensure t)
-
-     (use-package treemacs-all-the-icons
-       :ensure t)
-   #+end_src
-** magit
-   #+begin_src elisp
-     (use-package magit
-       :ensure t)
-
-     (use-package seq
-       :ensure t)
-   #+end_src
-** TODO ibuffer
-   (use-package )
-
-** smartparens
-   #+begin_src elisp
-     (use-package smartparens
-       :init (smartparens-global-mode)
-       :hook (prog-mode text-mode markdown-mode)
-       :config
-       (require 'smartparens-config))
-   #+end_src
-
-** lsp-mode 
-   #+begin_src elisp
-     (use-package lsp-mode
-       :init
-       ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
-       (setq lsp-keymap-prefix "C-c l")
-       :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
-	      (c-mode . lsp)
-	      (rust-mode . lsp)
-	      ;; if you want which-key integration
-	      (lsp-mode . lsp-enable-which-key-integration))
-       :commands lsp)
-
-     ;; optionally
-     (use-package lsp-ui :commands lsp-ui-mode)
-     ;; if you are helm user
-     ;;(use-package helm-lsp :commands helm-lsp-workspace-symbol)
-     ;; if you are ivy user
-     ;;(use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
-     (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
-
-     ;; optionally if you want to use debugger
-     ;;(use-package dap-mode)
-     ;; (use-package dap-LANGUAGE) ;; to load the dap adapter for your language
-     (use-package dap-mode)
-  #+end_src
-
-   LSP options which make life nicer.
-
-   #+begin_src elisp
-     (setq gc-cons-threshold 160000000)
-     (setq read-process-output-max (* 1024 1024)) ;; 1mb
-
-     (setq lsp-ui-doc-delay 0.5)
-     (setq lsp-ui-doc-show-with-cursor t)
-     (setq lsp-ui-doc-show-with-mouse t)
-
-     ;(add-hook 'lsp-mode-hook 'lsp-headerline-breadcrumb-mode)
-     (setq lsp-headerline-breadcrumb-enable t)
-     (setq lsp-headerline-breadcrumb-enable-symbol-numbers nil)
-     (setq lsp-headerline-breadcrumb-icons-enable t)
-
-     (use-package lsp-grammarly
-       :ensure t
-       :hook (text-mode . (lambda ()
-			    (require 'lsp-grammarly)
-			    (lsp))))  ; or lsp-deferred
-
-     (setq lsp-ui-sideline-show-code-actions t)
-     (setq lsp-ui-sideline-show-hover nil)
-     (setq lsp-ui-sideline-show-diagnostics t)
-     (setq lsp-ui-doc-enable t)
-     (setq lsp-ui-doc-show-with-cursor t)
-     (setq lsp-ui-doc-show-with-mouse nil)
-     (setq lsp-ui-doc-delay 0.25)
-     (setq lsp-ui-doc-use-webkit nil)
-     (setq lsp-ui-doc-glance t)
-   #+end_src
-   
-** sly
-   #+begin_src elisp
-     (use-package sly
-       :ensure t
-       :elpaca (:host github :repo "joaotavora/sly"))
-   #+end_src
-
-** rust-mode
-   #+begin_src elisp
-     (use-package rust-mode
-       :ensure t
-       :hook (rust-mode . #'prettify-symbols-mode))
-   #+end_src
-
-   
-
-** comment-tags
-   #+begin_src elisp
-     (use-package comment-tags
-       :ensure t
-       :config
-       (setf comment-tags-case-sensitive nil)
-       (setf comment-tags-require-colon nil)
-       :hook
-       (prog-mode . comment-tags-mode)
-       (c-mode    . comment-tags-mode))
-   #+end_src
 ** doom-themes
     #+begin_src elisp
       (use-package doom-themes
@@ -286,26 +106,260 @@
 	;; Corrects (and improves) org-mode's native fontification.
 	(doom-themes-org-config))
     #+end_src
+** lsp-mode 
+   #+begin_src elisp
+     (use-package lsp-mode
+       :init
+       ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
+       (setq lsp-keymap-prefix "C-c l")
+       :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
+	      (c-mode . lsp)
+	      (rust-mode . lsp)
+	      ;;nn if you want which-key integration
+	      (lsp-mode . lsp-enable-which-key-integration))
+       :commands lsp)
+
+     ;; optionally
+     (use-package lsp-ui :commands lsp-ui-mode)
+     ;; if you are helm user
+     ;;(use-package helm-lsp :commands helm-lsp-workspace-symbol)
+     ;; if you are ivy user
+     ;;(use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
+     (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
+
+     ;; optionally if you want to use debugger
+     ;;(use-package dap-mode)
+     ;; (use-package dap-LANGUAGE) ;; to load the dap adapter for your language
+     (use-package dap-mode)
+    #+end_src
+
+   LSP options that make life nicer.
+
+   #+begin_src elisp
+     (setq gc-cons-threshold 160000000)
+     (setq read-process-output-max (* 1024 1024)) ;; 1mb
+
+     (setq lsp-ui-doc-delay 0.5)
+     (setq lsp-ui-doc-show-with-cursor t)
+     (setq lsp-ui-doc-show-with-mouse t)
+
+     ;(add-hook 'lsp-mode-hook 'lsp-headerline-breadcrumb-mode)
+     (setq lsp-headerline-breadcrumb-enable t)
+     (setq lsp-headerline-breadcrumb-enable-symbol-numbers nil)
+     (setq lsp-headerline-breadcrumb-icons-enable t)
+     (setq lsp-on-type-formatting nil)
+
+     (use-package lsp-grammarly
+       :ensure t)
+
+     (setq lsp-ui-sideline-show-code-actions t)
+     (setq lsp-ui-sideline-show-hover nil)
+     (setq lsp-ui-sideline-show-diagnostics t)
+     (setq lsp-ui-doc-enable t)
+     (setq lsp-ui-doc-show-with-cursor t)
+     (setq lsp-ui-doc-show-with-mouse nil)
+     (setq lsp-ui-doc-delay 0.25)
+     (setq lsp-ui-doc-use-webkit nil)
+     (setq lsp-ui-doc-glance t)
+   #+end_src
+   
+** magit
+   #+begin_src elisp
+     (use-package magit
+       :ensure t)
+
+     (use-package seq
+       :ensure t)
+
+     (use-package transient
+       :ensure t)
+   #+end_src
+
+   #+RESULTS:
+   
+** nerd-icons
+   #+begin_src elisp
+     (use-package nerd-icons
+       :ensure t)
+
+     (use-package all-the-icons
+       :ensure t)
+
+     (use-package treemacs-all-the-icons
+       :ensure t)
+   #+end_src
+** treemacs
+   #+begin_src elisp
+     (use-package treemacs
+       :ensure t
+       :defer t)
+   #+end_src
+   
+
+* Programming Stuff
+** comment-tags
+   #+begin_src elisp
+     (use-package comment-tags
+       :ensure t
+       :config
+       (setf comment-tags-case-sensitive t)
+       (setf comment-tags-require-colon nil)
+       :hook
+       (prog-mode . comment-tags-mode)
+       (c-mode    . comment-tags-mode))
+   #+end_src
 ** indent-bars
-   There is an optional stipple mode that can provide potentially better looking indent bars, if your particular build of emacs supports it. I have it disabled for now. This package also uses emacs treesit to determine where the indentations should go. however, *you need to install the language grammar for any language you want to support with this* use ~treesit-install-language-grammar~
-#+begin_src elisp
-  (use-package indent-bars
-    :elpaca (:host github :repo "jdtsmith/indent-bars")
-    :ensure t
-    :hook (prog-mode . indent-bars-mode)
-    :config
-    (setf indent-bars-prefer-character t
-          indent-bars-no-stipple-char ?│
-          indent-bars-treesit-support t
-          indent-bars-treesit-ignore-wrap t
-          indent-bars-treesit-ignore-blank-lines-types t
-          indent-bars-no-descent-string t
-          )
-    )
-#+end_src
+    There is an optional stipple mode that can provide potentially better looking indent bars, if your particular build of emacs supports it. I have it disabled for now. This package also uses emacs treesit to determine where the indentations should go. however, *you need to install the language grammar for any language you want to support with this* use ~treesit-install-language-grammar~
+ #+begin_src elisp
+   (use-package indent-bars
+     :elpaca (:host github :repo "jdtsmith/indent-bars")
+     :ensure t
+     :hook (prog-mode . indent-bars-mode)
+     :config
+     (setf indent-bars-prefer-character t
+           indent-bars-no-stipple-char ?│
+           indent-bars-treesit-support t
+           indent-bars-treesit-ignore-wrap t
+           indent-bars-treesit-ignore-blank-lines-types t
+           indent-bars-no-descent-string t)
+     :custom
+     (indent-bars-treesit-support t)
+     (indent-bars-treesit-wrap '((c argument_list
+                                    parameter_list
+                                    init_declarator)
+                                 (python argument_list
+                                         parameters
+                                         list
+                                         list_comprehension
+                                         dictionary
+                                         dictionary_comprehension
+                                         parenthesized_expression
+                                         subscript))))
+ #+end_src
 
-#+RESULTS:
+ #+RESULTS:
+** rust-mode
+   #+begin_src elisp
+     (use-package rust-mode
+       :ensure t
+       :hook (rust-mode . #'prettify-symbols-mode))
+   #+end_src
 
+** sly
+   #+begin_src elisp
+     (use-package sly
+       :ensure t
+       :elpaca (:host github :repo "joaotavora/sly"))
+   #+end_src
+
+** smartparens
+   #+begin_src elisp
+     (use-package smartparens
+       :init (smartparens-global-mode)
+       :hook (prog-mode text-mode markdown-mode)
+       :config
+       (require 'smartparens-config))
+   #+end_src
+   
+* Completion/Ergonomics
+** company
+   #+begin_src elisp
+     (use-package company
+       :ensure t
+       :hook (after-init-hook . global-company-mode))
+   #+end_src
+
+** consult
+   #+begin_src elisp
+     (use-package consult)
+   #+end_src
+
+** DISABLED helm 
+   I like helm, it provides pretty completion, but it is sort of awkward.  There
+   is a bit of learning curve with file searching.  It also doesn't play well
+   with consult.  For these reasons, I have ditched it in favor of ~vertico~
+
+   #+begin_src 
+     (use-package ac-helm
+       :init (helm-mode 1)
+       :ensure t
+       :config 
+       (setf helm-window-prefer-horizontal-split t) 
+       (global-set-key (kbd "M-x") 'helm-M-x)
+       (global-set-key (kbd "C-x C-f") 'helm-find-files)
+       (global-set-key (kbd "C-x C-b") 'helm-buffers-list)
+       (global-set-key (kbd "M-g i") 'helm-imenu)
+       (setf helm-display-header-line nil)
+       (set-face-attribute 'helm-source-header nil :height 0.9)
+       (helm-autoresize-mode 1)
+       (setf helm-split-window-in-side-p t)
+       (setf helm-always-two-windows t))
+    #+end_src
+
+   #+RESULTS:
+   
+** vertico
+   this is an alternative to helm.  It provides completion in various contexts.
+   I believe it is more lightweight as well.
+
+   Importantly, it plays nice with consult.  I like consult, mostly for
+   ~consult-theme~, so I am using this for my completion needs now.
+
+   vertico also presents completions options in a variety of ways, such as in
+   buffers, or in a grid layout.
+   #+begin_src elisp
+     (use-package vertico
+       :ensure t
+       :init (vertico-mode)
+       :config
+       ;; Enable vertico-multiform
+       (vertico-multiform-mode)
+
+       ;; Configure the display per command.
+       ;; Use a buffer with indices for imenu
+       ;; and a flat (Ido-like) menu for M-x.
+       (setq vertico-multiform-commands
+             '((consult-imenu buffer indexed)
+               (consult-buffer buffer indexed)
+               (consult-outline buffer indexed)
+               (execute-extended-command grid)))
+
+       ;; Configure the display per completion category.
+       ;; Use the grid display for files and a buffer
+       ;; for the consult-grep commands.
+       (setq vertico-multiform-categories
+             '((file grid)
+               (consult-grep buffer))))
+   #+end_src
+
+   
+** hotfuzz
+   adds fuzzy completion to 
+
+   #+begin_src elisp
+     (use-package hotfuzz
+       :ensure t)
+
+     (setq completion-styles '(hotfuzz))
+   #+end_src
+** which-key
+   #+begin_src elisp
+     (use-package which-key
+       :init (which-key-mode 1)
+       :config
+       (setq which-key-side-window-location 'bottom
+	     which-key-sort-order #'which-key-key-order-alpha
+	     which-key-add-column-padding 1
+	     which-key-max-display-columns nil
+	     which-key-min-display-lines 6
+	     which-key-side-window-slot -10
+	     which-key-window-max-height 0.25
+	     which-key-idle-delay 0.4
+	     which-key-max-description-length 25
+	     which-key-allow-imprecise-window-fit t
+	     which-key-separator "  " ))
+    #+end_src
+    
 * Major Modes
 ** general
   #+begin_src elisp
@@ -319,6 +373,7 @@
     (window-divider-mode t)
 
     (global-display-fill-column-indicator-mode t)
+    (set-fill-column 80)
 
     (tab-bar-mode t)
 
@@ -327,6 +382,9 @@
 
     (setq make-backup-files nil)
     (recentf-mode)
+
+    ;; allow window navigation with SHIFT+arrow
+    (windmove-default-keybindings)
    #+end_src
 
    There are some general options that can only be applied via hooks for each
@@ -335,33 +393,95 @@
    #+begin_src elisp
      (defun es/buffer-opts ()
        (set-fill-column 80)
-       (indent-tabs-mode -1))
+       (indent-tabs-mode -1)
+       (indent-bars-reset) ; not sure why but this is sort of necessary.
+       )
 
      (add-hook 'prog-mode-hook #'es/buffer-opts)
      (add-hook 'text-mode-hook #'es/buffer-opts)
    #+end_src
+
+   enable ANSI colors in comint buffers
+   #+begin_src elisp
+     (require 'ansi-color)
+     (defun colorize-compilation-buffer ()
+       (ansi-color-apply-on-region compilation-filter-start (point)))
+     (add-hook 'compilation-filter-hook 'colorize-compilation-buffer)
+   #+end_src
+
 ** org-mode
    #+begin_src elisp
      (setf org-adapt-indentation t)
 
      (use-package org-bullets
        :init (add-hook 'org-mode-hook 'org-bullets-mode))
+
+     (defun es/org-mode ()
+       (when (equal (buffer-name) "config.org")
+         (lsp-disconnect)
+         (lsp-mode -1))
+       (keymap-local-set "C-c e" #'org-edit-src-code)
+       (indent-bars-mode -1))
+
+     (add-hook 'org-mode-hook 'es/org-mode)
    #+end_src
+
+   Org mode seems to have a bug/limiting factor that prevents multiline emphasis from displaying.
+   that is, the following paragraph should be entirely italic:
+
+   /Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+   tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+   quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodop
+   consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+   cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+   proident, sunt in culpa qui officia deserunt mollit anim id est laborum./
+
+   #+begin_src elisp
+     (with-eval-after-load 'org
+       ;; Allow multiple line Org emphasis markup.
+       ;; http://emacs.stackexchange.com/a/13828/115
+       (setcar (nthcdr 4 org-emphasis-regexp-components) 20) ;Up to 20 lines, default is just 1
+       ;; Below is needed to apply the modified `org-emphasis-regexp-components'
+       ;; settings from above.
+       (org-set-emph-re 'org-emphasis-regexp-components org-emphasis-regexp-components))
+   #+end_src
+
+   the following will enable org-babel to execute C source code in source
+   blcoks.  Apparently, it is important to use a capital "C" in the source
+   blocks.
    
+   #+begin_src elisp
+     (org-babel-do-load-languages
+      'org-babel-load-languages '((C . t)))
+   #+end_src
    
 ** prog-mode
    these are general options I want set for all programming modes
 
    #+begin_src elisp
      (defun es/prog-mode-opts ()
-	 (set-fill-column 80))
+         (set-fill-column 80)
+         (keymap-local-set "C-c e" #'consult-flymake)
+         (keymap-local-set "C-c E" #'consult-compile-error))
 
      (add-hook 'prog-mode-hook #'es/prog-mode-opts)
    #+end_src
+   
+** text-mode
+   #+begin_src elisp
+     (defun es/text-mode ()
+       (unless (equal (buffer-name) "config.org")
+	 (require 'lsp-grammarly)
+	 (lsp)))
+
+     (add-hook 'text-mode-hook 'es/text-mode)
+   #+end_src
+
 ** c-mode
    #+begin_src elisp
      (defun ethan-c-settings ()
-       (setf c-basic-offset 4))
+       (setf c-basic-offset 4)
+       (indent-bars-reset))
 
      (add-hook 'c-mode-hook #'ethan-c-settings)
    #+end_src
@@ -414,10 +534,17 @@
     (keymap-global-set "C-v" 'View-scroll-half-page-forward)
     (keymap-global-set "M-v" 'View-scroll-half-page-backward)
 
-    (keymap-global-set "C-x ," #'helm-recentf)
-    (keymap-global-set "C-c h" #'helm-google-suggest)
-
-    ;; wrapping things in parentheses, quotes, etc
-    
+    ;; enable imenu easily
+    (keymap-global-set "C-c i" #'consult-imenu)
   #+end_src
 
+  Helm Keybinds (disabled)
+  #+begin_src elisp
+    ;;(keymap-global-set "C-x ," #'helm-recentf)
+    ;;(keymap-global-set "C-c h" #'helm-google-suggest)
+  #+end_src
+
+#+begin_src elisp
+  (keymap-global-set "C-x b" #'consult-buffer)
+#+end_src
+  
