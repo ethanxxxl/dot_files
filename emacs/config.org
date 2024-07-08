@@ -46,12 +46,15 @@
     (elpaca `(,@elpaca-order))
   #+end_src
 
+
   *ENABLE USE-PACKAGE SUPPORT FOR ELPACA*
   #+begin_src elisp
     ;; Install use-package support
     (elpaca elpaca-use-package
       ;; Enable :elpaca use-package keyword.
-      (elpaca-use-package-mode))
+      (elpaca-use-package-mode)
+      (setq elpaca-use-package-by-default t))
+
     (setq use-package-always-ensure t)
 
     ;; Block until current queue processed.
@@ -67,9 +70,9 @@
     ;;Turns off elpaca-use-package-mode current declaration
     ;;Note this will cause the declaration to be interpreted immediately (not deferred).
     ;;Useful for configuring built-in emacs features.
-    (use-package emacs :ensure nil :config (setq ring-bell-function #'ignore))
-  #+end_src
+    ;(use-package emacs :ensure nil :config (setq ring-bell-function #'ignore))
 
+  #+end_src
 
 * Misc Packages
 ** doom-modeline
@@ -109,58 +112,58 @@
 ** lsp-mode 
    #+begin_src elisp
      (use-package lsp-mode
+       :ensure t
+       :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
+              (c-mode . lsp)
+              (rust-mode . lsp)
+              ;;nn if you want which-key integration
+              (lsp-mode . lsp-enable-which-key-integration))
+       :commands lsp
        :init
        ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
        (setq lsp-keymap-prefix "C-c l")
-       :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
-	      (c-mode . lsp)
-	      (rust-mode . lsp)
-	      ;;nn if you want which-key integration
-	      (lsp-mode . lsp-enable-which-key-integration))
-       :commands lsp)
+
+       ;; personal LSP preferences.
+       (setq gc-cons-threshold 160000000
+             read-process-output-max (* 1024 1024)  ;; 1mb
+
+             lsp-headerline-breadcrumb-enable t
+             lsp-headerline-breadcrumb-enable-symbol-numbers nil
+             lsp-headerline-breadcrumb-icons-enable t
+             lsp-on-type-formatting nil))
 
      ;; optionally
-     (use-package lsp-ui :commands lsp-ui-mode)
+     (use-package lsp-ui
+       :ensure t
+       :commands lsp-ui-mode
+       :init
+       (setq lsp-ui-doc-delay 0.25
+             lsp-ui-doc-show-with-cursor t
+             lsp-ui-doc-show-with-mouse nil
+             lsp-ui-sideline-show-code-actions t
+             lsp-ui-sideline-show-hover nil
+             lsp-ui-sideline-show-diagnostics t
+             lsp-ui-doc-enable t
+             lsp-ui-doc-use-webkit nil
+             lsp-ui-doc-glance t))
+
      ;; if you are helm user
      ;;(use-package helm-lsp :commands helm-lsp-workspace-symbol)
      ;; if you are ivy user
      ;;(use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
-     (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
+     (use-package lsp-treemacs :ensure t :commands lsp-treemacs-errors-list)
 
      ;; optionally if you want to use debugger
      ;;(use-package dap-mode)
      ;; (use-package dap-LANGUAGE) ;; to load the dap adapter for your language
-     (use-package dap-mode)
+     (use-package dap-mode :ensure t)
+
+     ;;(add-hook 'lsp-mode-hook 'lsp-headerline-breadcrumb-mode)
     #+end_src
 
-   LSP options that make life nicer.
-
    #+begin_src elisp
-     (setq gc-cons-threshold 160000000)
-     (setq read-process-output-max (* 1024 1024)) ;; 1mb
-
-     (setq lsp-ui-doc-delay 0.5)
-     (setq lsp-ui-doc-show-with-cursor t)
-     (setq lsp-ui-doc-show-with-mouse t)
-
-     ;(add-hook 'lsp-mode-hook 'lsp-headerline-breadcrumb-mode)
-     (setq lsp-headerline-breadcrumb-enable t)
-     (setq lsp-headerline-breadcrumb-enable-symbol-numbers nil)
-     (setq lsp-headerline-breadcrumb-icons-enable t)
-     (setq lsp-on-type-formatting nil)
-
      (use-package lsp-grammarly
        :ensure t)
-
-     (setq lsp-ui-sideline-show-code-actions t)
-     (setq lsp-ui-sideline-show-hover nil)
-     (setq lsp-ui-sideline-show-diagnostics t)
-     (setq lsp-ui-doc-enable t)
-     (setq lsp-ui-doc-show-with-cursor t)
-     (setq lsp-ui-doc-show-with-mouse nil)
-     (setq lsp-ui-doc-delay 0.25)
-     (setq lsp-ui-doc-use-webkit nil)
-     (setq lsp-ui-doc-glance t)
    #+end_src
    
 ** magit
@@ -212,8 +215,7 @@
     There is an optional stipple mode that can provide potentially better looking indent bars, if your particular build of emacs supports it. I have it disabled for now. This package also uses emacs treesit to determine where the indentations should go. however, *you need to install the language grammar for any language you want to support with this* use ~treesit-install-language-grammar~
  #+begin_src elisp
    (use-package indent-bars
-     :elpaca (:host github :repo "jdtsmith/indent-bars")
-     :ensure t
+     :ensure (:host github :repo "jdtsmith/indent-bars")
      :hook (prog-mode . indent-bars-mode)
      :config
      (setf indent-bars-prefer-character t
@@ -237,19 +239,24 @@
                                          subscript))))
  #+end_src
 
- #+RESULTS:
+ #+results:
 ** rust-mode
    #+begin_src elisp
      (use-package rust-mode
        :ensure t
        :hook (rust-mode . #'prettify-symbols-mode))
    #+end_src
-
+** lua-mode
+   #+begin_src elisp
+     (use-package lua-mode
+       :ensure (:host github :repo "immerrr/lua-mode")
+       :custom
+       (lua-indent-level 4))
+   #+end_src
 ** sly
    #+begin_src elisp
      (use-package sly
-       :ensure t
-       :elpaca (:host github :repo "joaotavora/sly"))
+       :ensure (:host github :repo "joaotavora/sly"))
    #+end_src
 
 ** smartparens
@@ -342,6 +349,7 @@
 
      (setq completion-styles '(hotfuzz))
    #+end_src
+   
 ** which-key
    #+begin_src elisp
      (use-package which-key
@@ -386,6 +394,7 @@
     ;; allow window navigation with SHIFT+arrow
     (windmove-default-keybindings)
    #+end_src
+
 
    There are some general options that can only be applied via hooks for each
    buffer. The following section sets these options for the base-derived
@@ -478,13 +487,74 @@
    #+end_src
 
 ** c-mode
-   #+begin_src elisp
-     (defun ethan-c-settings ()
-       (setf c-basic-offset 4)
-       (indent-bars-reset))
+   this is a function to create a centered comment header.
 
-     (add-hook 'c-mode-hook #'ethan-c-settings)
+   #+begin_src elisp
+     (defun es/center-comment ()
+       (interactive)
+       ;; 1. detect the comment style, either /* or //
+       ;; 2. get the comment text
+       ;; 3. get comment length
+       ;; 4. insert centered comment
+
+       (beginning-of-line)
+       (skip-chars-forward "[:blank:]")
+
+       (let ((indent (current-column))
+             (comment-type (cond ((search-forward "//" (line-end-position) t) 'line)
+                                 ((search-forward "/*" (line-end-position) t) 'block)))
+             (heading (string-clean-whitespace
+                       (buffer-substring (point) (line-end-position))))
+             fill-char
+             beg-str
+             end-str
+             fill-len)
+
+         (cond ((eq comment-type 'line)
+                (setf fill-char ?/
+                      beg-str "//"
+                      end-str ""))
+               ((eq comment-type 'block)
+                (setf fill-char ?*
+                      beg-str "/*"
+                      end-str "*/")
+                (if (equal "*/" (substring heading
+                                           (- (length heading) 2)
+                                           (length heading)))
+                    (setf heading (string-clean-whitespace
+                                   (substring heading 0 (- (length heading) 2)))))))
+
+         (setf heading (concat " " heading " ")
+               fill-len (- fill-column
+                           indent
+                           (length heading)))
+
+         ;; comment-type is nil when there is no comment at (point)
+         (when (and comment-type (< 0 fill-len))
+           (delete-line)
+
+           (let ((fill-l (- (/ fill-len 2) (length beg-str)))
+                 (fill-r (- (ceiling (/ fill-len 2.0)) (length end-str))))
+
+             (mapcar #'insert
+                     (list (make-string indent #x20)
+                           beg-str
+                           (make-string fill-l fill-char) 
+                           heading
+                           (make-string fill-r fill-char)
+                           end-str
+                           "\n"))))))
    #+end_src
+
+      #+begin_src elisp
+        (defun ethan-c-settings ()
+          (setf c-basic-offset 4)
+          (indent-bars-reset))
+
+        (add-hook 'c-mode-hook #'ethan-c-settings)
+        (define-key c-mode-map (kbd "C-c c") #'es/center-comment)
+   #+end_src
+
 
 ** lisp-mode
    #+begin_src elisp
@@ -496,12 +566,13 @@
        (keymap-set sly-mrepl-mode-map "C-M-p" 'sly-mrepl-previous-prompt)
        (keymap-set sly-mrepl-mode-map "C-M-n" 'sly-mrepl-next-prompt))
 
-     (defun ethan-lisp-keybinds ()
+     (defun es/lisp-config ()
        (interactive)
-       (keymap-set lisp-mode-map "C-k" 'sp-kill-hybrid-sexp))
+       (keymap-set lisp-mode-map "C-k" 'sp-kill-hybrid-sexp)
+       (indent-bars-mode -1))
 
      (add-hook 'sly-mrepl-mode-hook #'ethan-sly-keybinds)
-     (add-hook 'lisp-mode-hook #'ethan-lisp-keybinds)
+     (add-hook 'lisp-mode-hook #'es/lisb-config)
    #+end_src
 
 * General Keybindings
@@ -536,6 +607,8 @@
 
     ;; enable imenu easily
     (keymap-global-set "C-c i" #'consult-imenu)
+
+    (keymap-global-set "C-x ," #'consult-recent-file)
   #+end_src
 
   Helm Keybinds (disabled)
