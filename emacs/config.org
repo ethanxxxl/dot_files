@@ -46,6 +46,12 @@
     (elpaca `(,@elpaca-order))
   #+end_src
 
+  #+begin_src elisp
+    (when (equal system-type 'windows-nt)
+      (elpaca-no-symlink-mode))
+
+  #+end_src
+  
 
   *ENABLE USE-PACKAGE SUPPORT FOR ELPACA*
   #+begin_src elisp
@@ -580,7 +586,19 @@
   #+begin_src elisp
     (defun ethan-open-config ()
       (interactive)
-      (find-file "~/.config/emacs/config.org"))
+
+      (find-file (let ((emacs-dir "~/.emacs.d/config.org")
+		       (config-dir "~/.config/emacs/config.org")
+		       (dir nil))
+
+		   (if (file-exists-p emacs-dir)
+		       (setf dir emacs-dir))
+
+		   (if (file-exists-p config-dir)
+		       (setf dir config-dir))
+
+		   dir)))
+
     (keymap-global-set "C-c p" 'ethan-open-config)
     (keymap-global-set "C-c t" 'treemacs)
     ;; (keymap-global-set "C-c b" )
@@ -590,14 +608,14 @@
     (defun es-swap-window (&optional current-window)
       (interactive)
       (let* ((win (or current-window
-                      (window-child (window-parent (selected-window)))))
-             (buf (window-buffer win))
-             (next-win (window-next-sibling win))
-             (next-buf (window-buffer next-win)))
-        (when next-win
-          (set-window-buffer win next-buf)
-          (set-window-buffer next-win buf)
-          (es-swap-window next-win))))
+		      (window-child (window-parent (selected-window)))))
+	     (buf (window-buffer win))
+	     (next-win (window-next-sibling win))
+	     (next-buf (window-buffer next-win)))
+	(when next-win
+	  (set-window-buffer win next-buf)
+	  (set-window-buffer next-win buf)
+	  (es-swap-window next-win))))
 
     (keymap-global-set "C-c w" 'es-swap-window)
 
