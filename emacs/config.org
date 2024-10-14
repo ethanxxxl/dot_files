@@ -197,8 +197,13 @@
        :ensure t
        :defer t)
    #+end_src
-   
+** org-anki
 
+   #+begin_src elisp
+     (use-package org-anki
+       :ensure (org-anki :host github :repo "eyeinsky/org-anki"))
+   #+end_src
+   
 * Programming Stuff
 ** comment-tags
    #+begin_src elisp
@@ -215,7 +220,7 @@
     There is an optional stipple mode that can provide potentially better looking indent bars, if your particular build of emacs supports it. I have it disabled for now. This package also uses emacs treesit to determine where the indentations should go. however, *you need to install the language grammar for any language you want to support with this* use ~treesit-install-language-grammar~
  #+begin_src elisp
    (use-package indent-bars
-     :ensure (:host github :repo "jdtsmith/indent-bars")
+     :ensure (indent-bars :host github :repo "jdtsmith/indent-bars")
      :hook (prog-mode . indent-bars-mode)
      :config
      (setf indent-bars-prefer-character t
@@ -383,7 +388,7 @@
     (global-display-fill-column-indicator-mode t)
     (set-fill-column 80)
 
-    (tab-bar-mode t)
+    (tab-bar-mode -1)
 
     (menu-bar--display-line-numbers-mode-relative)
     (indent-tabs-mode nil)
@@ -392,7 +397,7 @@
     (recentf-mode)
 
     ;; allow window navigation with SHIFT+arrow
-    (windmove-default-keybindings)
+    ;; (windmove-default-keybindings)
    #+end_src
 
 
@@ -605,10 +610,17 @@
     (keymap-global-set "C-v" 'View-scroll-half-page-forward)
     (keymap-global-set "M-v" 'View-scroll-half-page-backward)
 
+    ;; enable recentf mode
+    (recentf-mode 1)
+  #+end_src
+
+  *CONSULT KEYBINDINGS*
+  #+begin_src elisp
     ;; enable imenu easily
     (keymap-global-set "C-c i" #'consult-imenu)
-
     (keymap-global-set "C-x ," #'consult-recent-file)
+    (keymap-global-set "C-x p f" #'consult-project-buffer)
+    (keymap-global-set "C-x p g" #'consult-ripgrep)
   #+end_src
 
   Helm Keybinds (disabled)
