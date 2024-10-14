@@ -176,10 +176,27 @@
    #+begin_src elisp
      (use-package magit
        :ensure t)
+   #+end_src
 
-     (use-package seq
-       :ensure t)
+   transient seems to require the built-in seq.  this generates a warning on startup.
+   see [[https://github.com/progfolio/elpaca/issues/216][this]] link for details as to what is going on here.
+   
+   #+begin_src elisp
+     (defun +elpaca-unload-seq (e)
+       (and (featurep 'seq) (unload-feature 'seq t))
+       (elpaca--continue-build e))
 
+     ;; You could embed this code directly in the reicpe, I just abstracted it into a function.
+     (defun +elpaca-seq-build-steps ()
+       (append (butlast (if (file-exists-p (expand-file-name "seq" elpaca-builds-directory))
+			    elpaca--pre-built-steps elpaca-build-steps))
+	       (list '+elpaca-unload-seq 'elpaca--activate-package)))
+
+     (use-package seq :elpaca `(seq :build ,(+elpaca-seq-build-steps)))
+   #+end_src
+
+   
+   #+begin_src elisp
      (use-package transient
        :ensure t)
    #+end_src
@@ -222,8 +239,13 @@
  #+begin_src elisp
    (use-package indent-bars
      :ensure (:host github :repo "jdtsmith/indent-bars")
-     :hook (prog-mode . indent-bars-mode)
-     :config
+:hook
+    (prog-mode . indent-bars-mode)
+    :config
+    (require 'indent-bars-ts)
+    (indent-bars-no-descend-lists t)
+    (indent-bars-treesit-support t)
+   
      (setf indent-bars-prefer-character t
            indent-bars-no-stipple-char ?│
            indent-bars-treesit-support t
@@ -246,6 +268,17 @@
  #+end_src
 
  #+results:
+** imenu-list
+   Show function/structs, etc in a separate buffer for easy navigation in larger
+   files.
+
+   #+begin_src elisp
+     (use-package imenu-list
+      :ensure (:host github :repo "bmag/imenu-list")
+      :config
+      (global-set-key (kbd "C-c i") #'imenu-list-smart-toggle)
+      (setf imenu-list-focus-after-activation t))
+   #+end_src
 ** rust-mode
    #+begin_src elisp
      (use-package rust-mode
@@ -435,7 +468,6 @@
        (when (equal (buffer-name) "config.org")
          (lsp-disconnect)
          (lsp-mode -1))
-       (keymap-local-set "C-c e" #'org-edit-src-code)
        (indent-bars-mode -1))
 
      (add-hook 'org-mode-hook 'es/org-mode)
@@ -561,7 +593,6 @@
         (define-key c-mode-map (kbd "C-c c") #'es/center-comment)
    #+end_src
 
-
 ** lisp-mode
    #+begin_src elisp
      (keymap-global-set "C->" 'sp-slurp-hybrid-sexp)
@@ -578,7 +609,7 @@
        (indent-bars-mode -1))
 
      (add-hook 'sly-mrepl-mode-hook #'ethan-sly-keybinds)
-     (add-hook 'lisp-mode-hook #'es/lisb-config)
+     (add-hook 'lisp-mode-hook #'es/lisp-config)
    #+end_src
 
 * General Keybindings
@@ -629,13 +660,6 @@
     (keymap-global-set "C-x ," #'consult-recent-file)
   #+end_src
 
-  Helm Keybinds (disabled)
-  #+begin_src elisp
-    ;;(keymap-global-set "C-x ," #'helm-recentf)
-    ;;(keymap-global-set "C-c h" #'helm-google-suggest)
-  #+end_src
-
 #+begin_src elisp
   (keymap-global-set "C-x b" #'consult-buffer)
 #+end_src
-  
