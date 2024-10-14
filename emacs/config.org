@@ -46,6 +46,12 @@
     (elpaca `(,@elpaca-order))
   #+end_src
 
+  #+begin_src elisp
+    (when (equal system-type 'windows-nt)
+      (elpaca-no-symlink-mode))
+
+  #+end_src
+  
 
   *ENABLE USE-PACKAGE SUPPORT FOR ELPACA*
   #+begin_src elisp
@@ -170,10 +176,27 @@
    #+begin_src elisp
      (use-package magit
        :ensure t)
+   #+end_src
 
-     (use-package seq
-       :ensure t)
+   transient seems to require the built-in seq.  this generates a warning on startup.
+   see [[https://github.com/progfolio/elpaca/issues/216][this]] link for details as to what is going on here.
+   
+   #+begin_src elisp
+     (defun +elpaca-unload-seq (e)
+       (and (featurep 'seq) (unload-feature 'seq t))
+       (elpaca--continue-build e))
 
+     ;; You could embed this code directly in the reicpe, I just abstracted it into a function.
+     (defun +elpaca-seq-build-steps ()
+       (append (butlast (if (file-exists-p (expand-file-name "seq" elpaca-builds-directory))
+			    elpaca--pre-built-steps elpaca-build-steps))
+	       (list '+elpaca-unload-seq 'elpaca--activate-package)))
+
+     (use-package seq :elpaca `(seq :build ,(+elpaca-seq-build-steps)))
+   #+end_src
+
+   
+   #+begin_src elisp
      (use-package transient
        :ensure t)
    #+end_src
@@ -220,9 +243,14 @@
     There is an optional stipple mode that can provide potentially better looking indent bars, if your particular build of emacs supports it. I have it disabled for now. This package also uses emacs treesit to determine where the indentations should go. however, *you need to install the language grammar for any language you want to support with this* use ~treesit-install-language-grammar~
  #+begin_src elisp
    (use-package indent-bars
-     :ensure (indent-bars :host github :repo "jdtsmith/indent-bars")
-     :hook (prog-mode . indent-bars-mode)
-     :config
+     :ensure (:host github :repo "jdtsmith/indent-bars")
+:hook
+    (prog-mode . indent-bars-mode)
+    :config
+    (require 'indent-bars-ts)
+    (indent-bars-no-descend-lists t)
+    (indent-bars-treesit-support t)
+   
      (setf indent-bars-prefer-character t
            indent-bars-no-stipple-char ?│
            indent-bars-treesit-support t
@@ -245,6 +273,17 @@
  #+end_src
 
  #+results:
+** imenu-list
+   Show function/structs, etc in a separate buffer for easy navigation in larger
+   files.
+
+   #+begin_src elisp
+     (use-package imenu-list
+      :ensure (:host github :repo "bmag/imenu-list")
+      :config
+      (global-set-key (kbd "C-c i") #'imenu-list-smart-toggle)
+      (setf imenu-list-focus-after-activation t))
+   #+end_src
 ** rust-mode
    #+begin_src elisp
      (use-package rust-mode
@@ -434,7 +473,6 @@
        (when (equal (buffer-name) "config.org")
          (lsp-disconnect)
          (lsp-mode -1))
-       (keymap-local-set "C-c e" #'org-edit-src-code)
        (indent-bars-mode -1))
 
      (add-hook 'org-mode-hook 'es/org-mode)
@@ -560,7 +598,6 @@
         (define-key c-mode-map (kbd "C-c c") #'es/center-comment)
    #+end_src
 
-
 ** lisp-mode
    #+begin_src elisp
      (keymap-global-set "C->" 'sp-slurp-hybrid-sexp)
@@ -577,7 +614,7 @@
        (indent-bars-mode -1))
 
      (add-hook 'sly-mrepl-mode-hook #'ethan-sly-keybinds)
-     (add-hook 'lisp-mode-hook #'es/lisb-config)
+     (add-hook 'lisp-mode-hook #'es/lisp-config)
    #+end_src
 
 * General Keybindings
@@ -585,7 +622,19 @@
   #+begin_src elisp
     (defun ethan-open-config ()
       (interactive)
-      (find-file "~/.config/emacs/config.org"))
+
+      (find-file (let ((emacs-dir "~/.emacs.d/config.org")
+		       (config-dir "~/.config/emacs/config.org")
+		       (dir nil))
+
+		   (if (file-exists-p emacs-dir)
+		       (setf dir emacs-dir))
+
+		   (if (file-exists-p config-dir)
+		       (setf dir config-dir))
+
+		   dir)))
+
     (keymap-global-set "C-c p" 'ethan-open-config)
     (keymap-global-set "C-c t" 'treemacs)
     ;; (keymap-global-set "C-c b" )
@@ -595,14 +644,14 @@
     (defun es-swap-window (&optional current-window)
       (interactive)
       (let* ((win (or current-window
-                      (window-child (window-parent (selected-window)))))
-             (buf (window-buffer win))
-             (next-win (window-next-sibling win))
-             (next-buf (window-buffer next-win)))
-        (when next-win
-          (set-window-buffer win next-buf)
-          (set-window-buffer next-win buf)
-          (es-swap-window next-win))))
+		      (window-child (window-parent (selected-window)))))
+	     (buf (window-buffer win))
+	     (next-win (window-next-sibling win))
+	     (next-buf (window-buffer next-win)))
+	(when next-win
+	  (set-window-buffer win next-buf)
+	  (set-window-buffer next-win buf)
+	  (es-swap-window next-win))))
 
     (keymap-global-set "C-c w" 'es-swap-window)
 
@@ -623,13 +672,6 @@
     (keymap-global-set "C-x p g" #'consult-ripgrep)
   #+end_src
 
-  Helm Keybinds (disabled)
-  #+begin_src elisp
-    ;;(keymap-global-set "C-x ," #'helm-recentf)
-    ;;(keymap-global-set "C-c h" #'helm-google-suggest)
-  #+end_src
-
 #+begin_src elisp
   (keymap-global-set "C-x b" #'consult-buffer)
 #+end_src
-  
