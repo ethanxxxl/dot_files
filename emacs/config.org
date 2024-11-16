@@ -116,6 +116,19 @@
 	(doom-themes-org-config))
     #+end_src
 ** lsp-mode 
+   the default clangd version used by LSP is 15.0.6, which I found is
+   inconsistent with the system clang in my C projects.  Following the
+   documentation found on the [[https://emacs-lsp.github.io/lsp-mode/page/lsp-clangd/][emacs LSP website]], the ~lsp-clangd-version~
+   variable must be set before the lsp is loaded.
+
+   Technically since we are using Elpaca, this /could/ be placed anywhere in
+   this file, as ~lsp-mode~ will be loaded asynchronously after this file is
+   loaded.
+   #+begin_src elisp
+     (setq lsp-clangd-version "19.1.0")
+   #+end_src
+
+   queue LSP mode for updating/loading and do base configuration.
    #+begin_src elisp
      (use-package lsp-mode
        :ensure t
@@ -239,32 +252,31 @@
  #+begin_src elisp
    (use-package indent-bars
      :ensure (:host github :repo "jdtsmith/indent-bars")
-:hook
-    (prog-mode . indent-bars-mode)
-    :config
-    (require 'indent-bars-ts)
-    (indent-bars-no-descend-lists t)
-    (indent-bars-treesit-support t)
-   
+     :hook
+     (prog-mode . indent-bars-mode)
+     :config
+     (require 'indent-bars-ts)
+
      (setf indent-bars-prefer-character t
            indent-bars-no-stipple-char ?│
            indent-bars-treesit-support t
            indent-bars-treesit-ignore-wrap t
            indent-bars-treesit-ignore-blank-lines-types t
-           indent-bars-no-descent-string t)
-     :custom
-     (indent-bars-treesit-support t)
-     (indent-bars-treesit-wrap '((c argument_list
-                                    parameter_list
-                                    init_declarator)
-                                 (python argument_list
-                                         parameters
-                                         list
-                                         list_comprehension
-                                         dictionary
-                                         dictionary_comprehension
-                                         parenthesized_expression
-                                         subscript))))
+           indent-bars-no-descent-string t
+           indent-bars-treesit-support t
+           indent-bars-no-descend-lists '()
+           indent-bars-treesit-wrap
+           '((c argument_list
+                parameter_list
+                init_declarator)
+             (python argument_list
+                     parameters
+                     list
+                     list_comprehension
+                     dictionary
+                     dictionary_comprehension
+                     parenthesized_expression
+                     subscript))))
  #+end_src
 
  #+results:
@@ -619,16 +631,16 @@
       (interactive)
 
       (find-file (let ((emacs-dir "~/.emacs.d/config.org")
-		       (config-dir "~/.config/emacs/config.org")
-		       (dir nil))
+                       (config-dir "~/.config/emacs/config.org")
+                       (dir nil))
 
-		   (if (file-exists-p emacs-dir)
-		       (setf dir emacs-dir))
+                   (if (file-exists-p emacs-dir)
+                       (setf dir emacs-dir))
 
-		   (if (file-exists-p config-dir)
-		       (setf dir config-dir))
+                   (if (file-exists-p config-dir)
+                       (setf dir config-dir))
 
-		   dir)))
+                   dir)))
 
     (keymap-global-set "C-c p" 'ethan-open-config)
     (keymap-global-set "C-c t" 'treemacs)
@@ -639,20 +651,16 @@
     (defun es-swap-window (&optional current-window)
       (interactive)
       (let* ((win (or current-window
-		      (window-child (window-parent (selected-window)))))
-	     (buf (window-buffer win))
-	     (next-win (window-next-sibling win))
-	     (next-buf (window-buffer next-win)))
-	(when next-win
-	  (set-window-buffer win next-buf)
-	  (set-window-buffer next-win buf)
-	  (es-swap-window next-win))))
+                      (window-child (window-parent (selected-window)))))
+             (buf (window-buffer win))
+             (next-win (window-next-sibling win))
+             (next-buf (window-buffer next-win)))
+        (when next-win
+          (set-window-buffer win next-buf)
+          (set-window-buffer next-win buf)
+          (es-swap-window next-win))))
 
     (keymap-global-set "C-c w" 'es-swap-window)
-
-    ;; make scrolling much more sensible
-    (keymap-global-set "C-v" 'View-scroll-half-page-forward)
-    (keymap-global-set "M-v" 'View-scroll-half-page-backward)
 
     ;; enable imenu easily
     (keymap-global-set "C-c i" #'consult-imenu)
@@ -662,4 +670,37 @@
 
 #+begin_src elisp
   (keymap-global-set "C-x b" #'consult-buffer)
+#+end_src
+
+
+The half-page scrolling functions found in view.el are not interactive.  I wrote
+wrapper functions for them so I can bind them to the default scroll keys.
+
+#+begin_src elisp
+  (defun es/scroll-half-page-forward ()
+    "Wrapper around `View-scroll-half-page-forward'"
+    (interactive)
+    (View-scroll-half-page-forward))
+
+  (defun es/scroll-half-page-backward ()
+    "Wrapper around `View-scroll-half-page-backward'"
+    (interactive)
+    (View-scroll-half-page-backward))
+
+  ;; make scrolling much more sensible
+  (keymap-global-set "C-v" #'es/scroll-half-page-forward)
+  (keymap-global-set "M-v" #'es/scroll-half-page-backward)
+#+end_src
+
+Eamcs 29+ comes with native smooth scrolling, the following code enables it.
+#+begin_src elisp
+  (pixel-scroll-precision-mode)
+
+  (setf pixel-scroll-precision-use-momentum t
+        pixel-scroll-precision-large-scroll-height  nil
+
+        mouse-wheel-progressive-speed nil
+        mouse-wheel-follow-mouse nil ;; scroll window under mouse
+        scroll-step 1 ;; keyboard scroll one line at a time
+        )
 #+end_src
