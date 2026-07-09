@@ -3,83 +3,6 @@
 #+DESCRIPTION: Ethan's personal Emacs config.
 #+STARTUP: Overview
 
-* Package Manager (elpaca)
-  I just copied this from the elpaca repository
-  #+begin_src elisp
-    (defvar elpaca-installer-version 0.7)
-    (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
-    (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
-    (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
-    (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-				  :ref nil :depth 1
-				  :files (:defaults "elpaca-test.el" (:exclude "extensions"))
-				  :build (:not elpaca--activate-package)))
-    (let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
-	   (build (expand-file-name "elpaca/" elpaca-builds-directory))
-	   (order (cdr elpaca-order))
-	   (default-directory repo))
-      (add-to-list 'load-path (if (file-exists-p build) build repo))
-      (unless (file-exists-p repo)
-	(make-directory repo t)
-	(when (< emacs-major-version 28) (require 'subr-x))
-	(condition-case-unless-debug err
-	    (if-let ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
-		     ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
-						     ,@(when-let ((depth (plist-get order :depth)))
-							 (list (format "--depth=%d" depth) "--no-single-branch"))
-						     ,(plist-get order :repo) ,repo))))
-		     ((zerop (call-process "git" nil buffer t "checkout"
-					   (or (plist-get order :ref) "--"))))
-		     (emacs (concat invocation-directory invocation-name))
-		     ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
-					   "--eval" "(byte-recompile-directory \".\" 0 'force)")))
-		     ((require 'elpaca))
-		     ((elpaca-generate-autoloads "elpaca" repo)))
-		(progn (message "%s" (buffer-string)) (kill-buffer buffer))
-	      (error "%s" (with-current-buffer buffer (buffer-string))))
-	  ((error) (warn "%s" err) (delete-directory repo 'recursive))))
-      (unless (require 'elpaca-autoloads nil t)
-	(require 'elpaca)
-	(elpaca-generate-autoloads "elpaca" repo)
-	(load "./elpaca-autoloads")))
-    (add-hook 'after-init-hook #'elpaca-process-queues)
-    (elpaca `(,@elpaca-order))
-  #+end_src
-
-  #+begin_src elisp
-    (when (equal system-type 'windows-nt)
-      (elpaca-no-symlink-mode))
-
-  #+end_src
-  
-
-  *ENABLE USE-PACKAGE SUPPORT FOR ELPACA*
-  #+begin_src elisp
-    ;; Install use-package support
-    (elpaca elpaca-use-package
-      ;; Enable :elpaca use-package keyword.
-      (elpaca-use-package-mode)
-      (setq elpaca-use-package-by-default t))
-
-    (setq use-package-always-ensure t)
-
-    ;; Block until current queue processed.
-    (elpaca-wait)
-
-    ;;When installing a package which modifies a form used at the top-level
-    ;;(e.g. a package which adds a use-package key word),
-    ;;use `elpaca-wait' to block until that package has been installed/configured.
-    ;;For example:
-    ;;(use-package general :demand t)
-    ;;(elpaca-wait)
-
-    ;;Turns off elpaca-use-package-mode current declaration
-    ;;Note this will cause the declaration to be interpreted immediately (not deferred).
-    ;;Useful for configuring built-in emacs features.
-    ;(use-package emacs :ensure nil :config (setq ring-bell-function #'ignore))
-
-  #+end_src
-
 * Misc Packages
 ** doom-modeline
    #+begin_src elisp
@@ -135,7 +58,8 @@
        :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
               (c-mode . lsp)
               (rust-mode . lsp)
-              ;;nn if you want which-key integration
+              (zig-mode .lsp)
+              ;; if you want which-key integration
               (lsp-mode . lsp-enable-which-key-integration))
        :commands lsp
        :init
@@ -179,11 +103,6 @@
 
      ;;(add-hook 'lsp-mode-hook 'lsp-headerline-breadcrumb-mode)
     #+end_src
-
-   #+begin_src elisp
-     (use-package lsp-grammarly
-       :ensure t)
-   #+end_src
    
 ** magit
    #+begin_src elisp
@@ -191,31 +110,15 @@
        :ensure t)
    #+end_src
 
-   transient seems to require the built-in seq.  this generates a warning on startup.
-   see [[https://github.com/progfolio/elpaca/issues/216][this]] link for details as to what is going on here.
-   
-   #+begin_src elisp
-     (defun +elpaca-unload-seq (e)
-       (and (featurep 'seq) (unload-feature 'seq t))
-       (elpaca--continue-build e))
-
-     ;; You could embed this code directly in the reicpe, I just abstracted it into a function.
-     (defun +elpaca-seq-build-steps ()
-       (append (butlast (if (file-exists-p (expand-file-name "seq" elpaca-builds-directory))
-			    elpaca--pre-built-steps elpaca-build-steps))
-	       (list '+elpaca-unload-seq 'elpaca--activate-package)))
-
-     (use-package seq :elpaca `(seq :build ,(+elpaca-seq-build-steps)))
-   #+end_src
-
+** transient
+   Note, this package has given me issues issues with its dependency on seq.
+   see [[https://github.com/progfolio/elpaca/issues/216][this github issue]] for clarification.
    
    #+begin_src elisp
      (use-package transient
        :ensure t)
    #+end_src
 
-   #+RESULTS:
-   
 ** nerd-icons
    #+begin_src elisp
      (use-package nerd-icons
@@ -236,8 +139,8 @@
 ** org-anki
 
    #+begin_src elisp
-     (use-package org-anki
-       :ensure (org-anki :host github :repo "eyeinsky/org-anki"))
+     ;(use-package org-anki
+     ;  :ensure (org-anki :host github :repo "eyeinsky/org-anki"))
    #+end_src
    
 * Programming Stuff
@@ -253,7 +156,13 @@
        (c-mode    . comment-tags-mode))
    #+end_src
 ** indent-bars
-    There is an optional stipple mode that can provide potentially better looking indent bars, if your particular build of emacs supports it. I have it disabled for now. This package also uses emacs treesit to determine where the indentations should go. however, *you need to install the language grammar for any language you want to support with this* use ~treesit-install-language-grammar~
+   There is an optional stipple mode that can provide potentially better looking
+   indent bars, if your particular build of emacs supports it. I have it
+   disabled for now. This package also uses emacs treesit to determine where the
+   indentations should go. however, *you need to install the language grammar
+   for any language you want to support with this* use
+   ~treesit-install-language-grammar~
+    
  #+begin_src elisp
    (use-package indent-bars
      :ensure (:host github :repo "jdtsmith/indent-bars")
@@ -288,7 +197,7 @@
 ** imenu-list
    Show function/structs, etc in a separate buffer for easy navigation in larger
    files.
-
+   
    #+begin_src elisp
      (use-package imenu-list
       :ensure (:host github :repo "bmag/imenu-list")
@@ -309,12 +218,59 @@
        :custom
        (lua-indent-level 4))
    #+end_src
+** zig mode
+   #+begin_src elisp
+      (use-package zig-mode
+        :ensure t)
+   #+end_src
+
+   The Zig compiler doesn't play nice with the ~compilation-mode~ output buffer,
+   because is uses some more niche ANSI escape codes (specificially, character
+   set switching) in it's output.  I mostly fixed this by stripping out any
+   remaining ANSI escape codes after the default parser colorizes the buffer.
+   There is still some garbage text left behind from the alternate character
+   set, but for my use case I can easily ignore it.
+
+   #+begin_src elisp
+     (defconst all-ansi-escape-sequences-regexp
+       (rx "\e"
+           (|
+            ;; OSC sequence
+            (seq
+             "]"
+             (* (in "\x08-\x0D"))
+             (* (in "\x20-\x7E"))
+             (| "\a" "\e\\"))
+            ;; Regular Sequence
+            (seq 
+             (in "[" "(")
+             (* (in "\x30-\x3F"))
+             (* (in "\x20-\x2F"))
+             (in "\x40-\x7E"))
+            ;; M (reverse index?)
+            (+ "M"))))
+
+     (defun es/colorize-compilation-buffer ()
+       (ansi-color-apply-on-region compilation-filter-start (point))
+
+       ;; delete any remaining escape sequences from output
+       (save-excursion
+         (goto-char compilation-filter-start)
+         (while (re-search-forward all-ansi-escape-sequences-regexp
+                                   (buffer-end 1)
+                                   t)
+           (delete-region (match-beginning 0) (match-end 0))
+           )))
+
+     (add-hook 'compilation-filter-hook 'es/colorize-compilation-buffer)
+     #+end_src
+   
 ** sly
    #+begin_src elisp
      (use-package sly
        :ensure (:host github :repo "joaotavora/sly"))
    #+end_src
-
+   
 ** smartparens
    #+begin_src elisp
      (use-package smartparens
@@ -334,7 +290,8 @@
 
 ** consult
    #+begin_src elisp
-     (use-package consult)
+     (use-package consult
+       :ensure t)
    #+end_src
 
 ** DISABLED helm 
@@ -359,8 +316,6 @@
        (setf helm-always-two-windows t))
     #+end_src
 
-   #+RESULTS:
-   
 ** vertico
    this is an alternative to helm.  It provides completion in various contexts.
    I believe it is more lightweight as well.
@@ -395,7 +350,6 @@
                (consult-grep buffer))))
    #+end_src
 
-   
 ** hotfuzz
    adds fuzzy completion to 
 
@@ -425,10 +379,15 @@
     #+end_src
     
 * Major Modes
-** general
+** General
   #+begin_src elisp
     (global-display-line-numbers-mode 1)
-    (global-visual-line-mode t)
+
+    (global-visual-line-mode -1)
+    (setq-default truncate-lines t)
+    (setf auto-hscroll-mode t)
+    (setf mouse-wheel-tilt-scroll t)
+    (horizontal-scroll-bar-mode -1)
 
     (menu-bar-mode -1)
     (scroll-bar-mode -1)
@@ -441,7 +400,7 @@
 
     (tab-bar-mode -1)
 
-    (menu-bar--display-line-numbers-mode-relative)
+    (menu-bar--display-line-numbers-mode-absolute)
     (indent-tabs-mode nil)
 
     (setq make-backup-files nil)
@@ -451,7 +410,6 @@
     ;; (windmove-default-keybindings)
    #+end_src
 
-
    There are some general options that can only be applied via hooks for each
    buffer. The following section sets these options for the base-derived
    modes. (except ~special-mode~)
@@ -459,19 +417,14 @@
      (defun es/buffer-opts ()
        (set-fill-column 80)
        (indent-tabs-mode -1)
-       (indent-bars-reset) ; not sure why but this is sort of necessary.
-       )
+       (company-mode 1)
+
+       (when (featurep 'indent-bars)
+         ; not sure why but this is sort of necessary.
+         (indent-bars-reset)))
 
      (add-hook 'prog-mode-hook #'es/buffer-opts)
      (add-hook 'text-mode-hook #'es/buffer-opts)
-   #+end_src
-
-   enable ANSI colors in comint buffers
-   #+begin_src elisp
-     (require 'ansi-color)
-     (defun colorize-compilation-buffer ()
-       (ansi-color-apply-on-region compilation-filter-start (point)))
-     (add-hook 'compilation-filter-hook 'colorize-compilation-buffer)
    #+end_src
 
 ** org-mode
@@ -530,20 +483,25 @@
 
      (add-hook 'prog-mode-hook #'es/prog-mode-opts)
    #+end_src
-   
-** text-mode
-   #+begin_src elisp
-     (defun es/text-mode ()
-       (unless (equal (buffer-name) "config.org")
-	 (require 'lsp-grammarly)
-	 (lsp)))
-
-     (add-hook 'text-mode-hook 'es/text-mode)
-   #+end_src
 
 ** c-mode
-   this is a function to create a centered comment header.
+   default c-mode settings
+   #+begin_src elisp
+     (setq-default c-basic-offset 4)
+     (setq-default indent-tabs-mode nil)
+   #+end_src
 
+   per-buffer c-mode settings
+   #+begin_src elisp
+     (defun ethan-c-settings ()
+       (setf c-basic-offset 4)
+       (indent-bars-reset))
+
+     (add-hook 'c-mode-hook #'ethan-c-settings)
+     (define-key c-mode-map (kbd "C-c c") #'es/center-comment)
+   #+end_src
+
+   this is a function to create a centered comment header.
    #+begin_src elisp
      (defun es/center-comment ()
        (interactive)
@@ -601,20 +559,11 @@
                            "\n"))))))
    #+end_src
 
-      #+begin_src elisp
-        (defun ethan-c-settings ()
-          (setf c-basic-offset 4)
-          (indent-bars-reset))
-
-        (add-hook 'c-mode-hook #'ethan-c-settings)
-        (define-key c-mode-map (kbd "C-c c") #'es/center-comment)
-   #+end_src
-
 ** lisp-mode
    #+begin_src elisp
      (keymap-global-set "C->" 'sp-slurp-hybrid-sexp)
      (keymap-global-set "C-<" 'sp-forward-barf-sexp)
-
+     
      (defun ethan-sly-keybinds ()
        (interactive)
        (keymap-set sly-mrepl-mode-map "C-M-p" 'sly-mrepl-previous-prompt)
@@ -688,7 +637,6 @@
   (keymap-global-set "C-x b" #'consult-buffer)
 #+end_src
 
-
 The half-page scrolling functions found in view.el are not interactive.  I wrote
 wrapper functions for them so I can bind them to the default scroll keys.
 
@@ -720,3 +668,18 @@ Eamcs 29+ comes with native smooth scrolling, the following code enables it.
         scroll-step 1 ;; keyboard scroll one line at a time
         )
 #+end_src
+
+* Scratch Config
+ 
+** Title Utility
+  #+begin_src elisp
+    (defun insert-title (text)
+    (interactive "sTitle: ")
+    (beginning-of-line)
+    (insert-char 59 80)
+    (insert "\n;; " text)
+    (unless (eql "\n" (length (thing-at-point 'line t)))
+      (insert "\n")))
+
+    (keymap-global-set "C-c n" 'insert-title)
+  #+end_src
