@@ -58,7 +58,8 @@
        :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
               (c-mode . lsp)
               (rust-mode . lsp)
-              (zig-mode .lsp)
+              (zig-mode . lsp)
+              (go-mode . lsp)
               ;; if you want which-key integration
               (lsp-mode . lsp-enable-which-key-integration))
        :commands lsp
@@ -265,6 +266,11 @@
      (add-hook 'compilation-filter-hook 'es/colorize-compilation-buffer)
      #+end_src
    
+** go-mode
+   #+begin_src emacs-lisp
+     (use-package go-mode
+       :ensure t)
+   #+end_src
 ** sly
    #+begin_src elisp
      (use-package sly
@@ -489,16 +495,43 @@
    #+begin_src elisp
      (setq-default c-basic-offset 4)
      (setq-default indent-tabs-mode nil)
+
+     (c-add-style "my-c-style"
+                  '("gnu"
+                    (c-basic-offset . 4)
+                    (c-offsets-alist
+                     (defun-block-intro      . +)   ; first line inside a function body
+                     (statement-block-intro  . +)   ; first line inside any other block (if/for/while/etc.)
+                     (substatement-open      . 0)   ; the { itself, e.g. after if (...)
+                     (substatement           . +)   ; single-statement body with no braces
+                     (block-close            . 0)   ; the closing }
+                     (statement-cont         . +)   ; continuation of a statement onto next line
+                     (arglist-intro          . +)   ; first arg on its own line
+                     (arglist-cont-nonempty  . +)
+                     (arglist-close          . 0)
+                     (case-label             . +)   ; case/default labels inside switch
+                     (statement-case-intro   . +)   ; statement after a case label
+                     (access-label           . 0)   ; public:/private:/protected: (C++, harmless in C)
+                     (member-init-intro      . +)
+                     (innamespace            . +))))
+
+     (setf c-default-style "my-c-style")
    #+end_src
 
    per-buffer c-mode settings
    #+begin_src elisp
-     (defun ethan-c-settings ()
+     (defun es/c-buffer-opts ()
        (setf c-basic-offset 4)
-       (indent-bars-reset))
+       (indent-bars-reset)
 
-     (add-hook 'c-mode-hook #'ethan-c-settings)
-     (define-key c-mode-map (kbd "C-c c") #'es/center-comment)
+       ;; this disables annoying behavior when pressing enter on the ends of lines.
+       (define-key c-mode-base-map "\C-m" 'c-context-line-break)
+
+       ;; enable syntactic indentation (default)
+       (c-toggle-syntactic-indentation 1))
+
+     (add-hook 'c-mode-hook 'es/c-buffer-opts)
+     (define-key c-mode-map (kbd "C-c c") 'es/center-comment)
    #+end_src
 
    this is a function to create a centered comment header.
