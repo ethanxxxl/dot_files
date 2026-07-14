@@ -611,6 +611,15 @@
      (add-hook 'lisp-mode-hook #'es/lisp-config)
    #+end_src
 
+** Makefile Mode
+   #+begin_src emacs-lisp
+     (defun es/makefile-mode-opts ()
+       (interactive)
+
+       (indent-tabs-mode 1))
+
+     (add-hook 'makefile-mode-hook 'es/makefile-mode-opts)
+   #+end_src
 * General Keybindings
   These are keybindings which I use everywhere all the time.
   #+begin_src elisp
