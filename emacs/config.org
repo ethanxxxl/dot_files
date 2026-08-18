@@ -19,25 +19,116 @@
    #+end_src
     
 ** doom-themes
+   My favourite light themes are:
+   - default
+   - doom-acario-light
+   - doom-one-light
+   - tango
+
+   My favourite dark themes are:
+   - doom-dark+
+   - modus-vivendi
+
+   #+begin_src elisp
+     (defvar es/dark-theme 'modus-vivendi)
+     (defvar es/light-theme 'tango)
+   #+end_src
+
+   The following code will track the current desktop theme setting.  It will
+   periodically poll for the desktop theme, then change the Emacs theme to a
+   light/dark theme to match.  Polling is enabled at startup, after doom-themes
+   are loaded so that the themes are available.
+   
+   #+begin_src emacs-lisp
+     (defun es/get-gnome-color-scheme ()
+       "runs gsetting command to get the current gnome color scheme.  Also
+     unwraps quotes that surround the value."
+       (let* ((cmd "gsettings get org.gnome.desktop.interface color-scheme")
+              (trim-re "[[:space:]\r\n']+"))
+         (string-trim (shell-command-to-string cmd) trim-re trim-re)))
+
+     (defvar es/gnome-color-scheme nil
+       "the current color scheme set by the gnome desktop. (ie, default or
+     prefer-dark)")
+
+     (defun es/update-theme ()
+       "Changes the emacs theme to the theme specified by the gnome desktop
+     setting.  Uses the the light/dark theme settings specified in this config."
+       (let ((current-color-scheme (es/get-gnome-color-scheme)))
+         (unless (equal es/gnome-color-scheme current-color-scheme)
+           (setf es/gnome-color-scheme current-color-scheme)
+
+           (consult-theme
+            (cond
+             ((equal current-color-scheme "default")
+              es/light-theme)
+             ((equal current-color-scheme "prefer-dark")
+              es/dark-theme))))))
+
+     (defvar es/gnome-theme-timer nil)
+     (defvar es/gnome-theme-poll-interval 1)
+
+     (defun es/start-gnome-polling ()
+       "Check for the current gnome theme (ie light or dark), periodically"
+       (interactive)
+       (unless es/gnome-theme-timer
+         (es/update-theme)
+         (setf es/gnome-theme-timer
+               (run-at-time 0 es/gnome-theme-poll-interval 'es/update-theme))))
+
+     (defun es/stop-gnome-polling ()
+       "Stop checking for the current gnome theme (ie light or dark)"
+       (interactive)
+       (when es/gnome-theme-timer
+         (cancel-timer es/gnome-theme-timer)
+         (setf es/gnome-theme-timer nil)))
+   #+end_src
+
     #+begin_src elisp
       (use-package doom-themes
-	:ensure t
-	:config
-	;; Global settings (defaults)
-	(setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
-	      doom-themes-enable-italic t) ; if nil, italics is universally disabled
-	(load-theme 'doom-dark+ t)
+        :ensure t
+        :config
+        ;; Global settings (defaults)
+        (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+              doom-themes-enable-italic t) ; if nil, italics is universally disabled
 
-	;; Enable flashing mode-line on errors
-	(doom-themes-visual-bell-config)
-	;; Enable custom neotree theme (all-the-icons must be installed!)
-	;; (doom-themes-neotree-config)
-	;; or for treemacs users
-	(setq doom-themes-treemacs-theme "doom-colors") ; use "doom-colors" for less minimal icon theme
-	(doom-themes-treemacs-config)
-	;; Corrects (and improves) org-mode's native fontification.
-	(doom-themes-org-config))
+        ;; poll gnome themes automatically
+        (es/start-gnome-polling)
+
+        ;; Enable flashing mode-line on errors
+        (doom-themes-visual-bell-config)
+        ;; Enable custom neotree theme (all-the-icons must be installed!)
+        ;; (doom-themes-neotree-config)
+        ;; or for treemacs users
+        (setq doom-themes-treemacs-theme "doom-colors") ; use "doom-colors" for less minimal icon theme
+        (doom-themes-treemacs-config)
+        ;; Corrects (and improves) org-mode's native fontification.
+        (doom-themes-org-config))
     #+end_src
+** ligatures
+   I wanted code ligatures and nice looking fonts to match Ghostty, I use
+   Jetbrains Mono
+   
+   #+begin_src emacs-lisp
+     (use-package ligature
+       :config
+       (ligature-set-ligatures 'prog-mode '("--" "---" "==" "===" "!=" "!==" "=!="
+                                            "=:=" "=/=" "<=" ">=" "&&" "&&&" "&=" "++" "+++" "***" ";;" "!!"
+                                            "??" "???" "?:" "?." "?=" "<:" ":<" ":>" ">:" "<:<" "<>" "<<<" ">>>"
+                                            "<<" ">>" "||" "-|" "_|_" "|-" "||-" "|=" "||=" "##" "###" "####"
+                                            "#{" "#[" "]#" "#(" "#?" "#_" "#_(" "#:" "#!" "#=" "^=" "<$>" "<$"
+                                            "$>" "<+>" "<+" "+>" "<*>" "<*" "*>" "</" "</>" "/>" "<!--" "<#--"
+                                            "-->" "->" "->>" "<<-" "<-" "<=<" "=<<" "<<=" "<==" "<=>" "<==>"
+                                            "==>" "=>" "=>>" ">=>" ">>=" ">>-" ">-" "-<" "-<<" ">->" "<-<" "<-|"
+                                            "<=|" "|=>" "|->" "<->" "<~~" "<~" "<~>" "~~" "~~>" "~>" "~-" "-~"
+                                            "~@" "[||]" "|]" "[|" "|}" "{|" "[<" ">]" "|>" "<|" "||>" "<||"
+                                            "|||>" "<|||" "<|>" "..." ".." ".=" "..<" ".?" "::" ":::" ":=" "::="
+                                            ":?" ":?>" "//" "///" "/*" "*/" "/=" "//=" "/==" "@_" "__" "???"
+                                            "<:<" ";;;"))
+       (global-ligature-mode t))
+
+     (set-face-attribute 'default nil :font "Jetbrains Mono-10.5")
+   #+end_src
 ** lsp-mode 
    the default clangd version used by LSP is 15.0.6, which I found is
    inconsistent with the system clang in my C projects.  Following the
@@ -386,6 +477,12 @@
     
 * Major Modes
 ** General
+#+begin_src emacs-lisp
+  ;; remove title bar for a cleaner look
+  (add-to-list 'default-frame-alist '(undecorated-round . t))
+  (add-to-list 'default-frame-alist '(undecorated . t))
+#+end_src
+   
   #+begin_src elisp
     (global-display-line-numbers-mode 1)
 
@@ -408,6 +505,7 @@
 
     (menu-bar--display-line-numbers-mode-absolute)
     (indent-tabs-mode nil)
+    (setf tab-width 4)
 
     (setq make-backup-files nil)
     (recentf-mode)
@@ -436,9 +534,13 @@
 ** org-mode
    #+begin_src elisp
      (setf org-adapt-indentation t)
+     (setf org-list-allow-alphabetical t)
 
      (use-package org-bullets
        :init (add-hook 'org-mode-hook 'org-bullets-mode))
+
+     (use-package htmlize)
+     
 
      (defun es/org-mode ()
        (when (equal (buffer-name) "config.org")
@@ -448,6 +550,16 @@
 
      (add-hook 'org-mode-hook 'es/org-mode)
    #+end_src
+
+   Org needs htmlize to export fancy code src blocks.  Also, indent bars needs
+   to be disabled for this to work.
+
+  #+begin_src elisp
+    (defun es/htmlize-mods ()
+      (indent-bars-mode -1))
+
+    (add-hook 'htmlize-before-hook 'es/htmlize-mods)
+  #+end_src
 
    Org mode seems to have a bug/limiting factor that prevents multiline emphasis from displaying.
    that is, the following paragraph should be entirely italic:
@@ -476,6 +588,12 @@
    #+begin_src elisp
      (org-babel-do-load-languages
       'org-babel-load-languages '((C . t)))
+   #+end_src
+
+   use a better program for LATEX output:
+   #+begin_src emacs-lisp
+     (setq org-latex-pdf-process
+           '("xelatex -interaction nonstopmode %f" "xelatex -interaction nonstopmode %f"))
    #+end_src
    
 ** prog-mode
@@ -522,6 +640,7 @@
    #+begin_src elisp
      (defun es/c-buffer-opts ()
        (setf c-basic-offset 4)
+
        (indent-bars-reset)
 
        ;; this disables annoying behavior when pressing enter on the ends of lines.
@@ -530,7 +649,7 @@
        ;; enable syntactic indentation (default)
        (c-toggle-syntactic-indentation 1))
 
-     (add-hook 'c-mode-hook 'es/c-buffer-opts)
+     (add-hook 'c-mode-common-hook 'es/c-buffer-opts)
      (define-key c-mode-map (kbd "C-c c") 'es/center-comment)
    #+end_src
 
