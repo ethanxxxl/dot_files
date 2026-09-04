@@ -44,7 +44,8 @@
        "runs gsetting command to get the current gnome color scheme.  Also
      unwraps quotes that surround the value."
        (let* ((cmd "gsettings get org.gnome.desktop.interface color-scheme")
-              (trim-re "[[:space:]\r\n']+"))
+              (trim-re "[[:space:]\r\n']+")
+              (default-directory "/tmp/")) ;; only run command on desktop.
          (string-trim (shell-command-to-string cmd) trim-re trim-re)))
 
      (defvar es/gnome-color-scheme nil
@@ -362,6 +363,25 @@
      (use-package go-mode
        :ensure t)
    #+end_src
+
+** docker stuff
+   Download YAML mode for working with docker compose files.
+   #+begin_src emacs-lisp
+     (use-package yaml-mode
+       :ensure t
+       :mode
+       ("\\.yaml\\'" "\\.yml\\'")
+       :custom-face
+       (font-lock-variable-name-face ((t (:foreground "#cba6f7"))))
+       :config)
+   #+end_src
+
+   #+begin_src emacs-lisp
+     (use-package dockerfile-mode
+       :ensure t)
+   #+end_src
+
+
 ** sly
    #+begin_src elisp
      (use-package sly

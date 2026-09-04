@@ -1,0 +1,10 @@
+/emacs/.cache/
+/emacs/.dap-breakpoints
+/emacs/.lsp-session-v1
+/emacs/auto-save-list/
+/emacs/config.el
+/emacs/eln-cache/
+/emacs/elpa/
+/emacs/elpaca/
+/emacs/recentf
+/emacs/tramp
