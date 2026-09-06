@@ -124,12 +124,14 @@
                                             "<=|" "|=>" "|->" "<->" "<~~" "<~" "<~>" "~~" "~~>" "~>" "~-" "-~"
                                             "~@" "[||]" "|]" "[|" "|}" "{|" "[<" ">]" "|>" "<|" "||>" "<||"
                                             "|||>" "<|||" "<|>" "..." ".." ".=" "..<" ".?" "::" ":::" ":=" "::="
-                                            ":?" ":?>" "//" "///" "/*" "*/" "/=" "//=" "/==" "@_" "__" "???"
+                                            ":?" ":?>" "/*" "*/" "/=" "//=" "/==" "@_" "__" "???"
                                             "<:<" ";;;"))
+       
        (global-ligature-mode t))
 
      (set-face-attribute 'default nil :font "Jetbrains Mono-10.5")
    #+end_src
+
 ** lsp-mode 
    the default clangd version used by LSP is 15.0.6, which I found is
    inconsistent with the system clang in my C projects.  Following the
@@ -841,13 +843,18 @@ Eamcs 29+ comes with native smooth scrolling, the following code enables it.
 #+begin_src elisp
   (pixel-scroll-precision-mode)
 
-  (setf pixel-scroll-precision-use-momentum t
+  (setf pixel-scroll-precision-use-momentum nil
         pixel-scroll-precision-large-scroll-height  nil
 
         mouse-wheel-progressive-speed nil
         mouse-wheel-follow-mouse nil ;; scroll window under mouse
         scroll-step 1 ;; keyboard scroll one line at a time
-        )
+        
+        scroll-conservatively 101 ;; don't center cursor while scrolling
+        scroll-margin 0 ;; start scrolling when cursor is one line from top/bottom
+
+        ;; redisplay-skip-fontification-on-input t ;; this can make scrolling smoother.
+        ) 
 #+end_src
 
 * Scratch Config
