@@ -3,524 +3,12 @@
 #+DESCRIPTION: Ethan's personal Emacs config.
 #+STARTUP: Overview
 
-* Misc Packages
-** doom-modeline
-   #+begin_src elisp
-     (use-package doom-modeline
-       :ensure t
-       :init (doom-modeline-mode 1))
-
-     (setq doom-modeline-icon t)
-     (setq doom-modeline-enable-word-count t)
-     (setq doom-modeline-buffer-encoding t)
-     (setq doom-modeline-indent-info t)
-     (setq doom-modeline-total-line-number t)
-     (setq doom-modeline-lsp t)
-   #+end_src
-    
-** doom-themes
-   My favourite light themes are:
-   - default
-   - doom-acario-light
-   - doom-one-light
-   - tango
-
-   My favourite dark themes are:
-   - doom-dark+
-   - modus-vivendi
-
-   #+begin_src elisp
-     (defvar es/dark-theme 'modus-vivendi)
-     (defvar es/light-theme 'tango)
-   #+end_src
-
-   The following code will track the current desktop theme setting.  It will
-   periodically poll for the desktop theme, then change the Emacs theme to a
-   light/dark theme to match.  Polling is enabled at startup, after doom-themes
-   are loaded so that the themes are available.
-   
-   #+begin_src emacs-lisp
-     (defun es/get-gnome-color-scheme ()
-       "runs gsetting command to get the current gnome color scheme.  Also
-     unwraps quotes that surround the value."
-       (let* ((cmd "gsettings get org.gnome.desktop.interface color-scheme")
-              (trim-re "[[:space:]\r\n']+")
-              (default-directory "/tmp/")) ;; only run command on desktop.
-         (string-trim (shell-command-to-string cmd) trim-re trim-re)))
-
-     (defvar es/gnome-color-scheme nil
-       "the current color scheme set by the gnome desktop. (ie, default or
-     prefer-dark)")
-
-     (defun es/update-theme ()
-       "Changes the emacs theme to the theme specified by the gnome desktop
-     setting.  Uses the the light/dark theme settings specified in this config."
-       (let ((current-color-scheme (es/get-gnome-color-scheme)))
-         (unless (equal es/gnome-color-scheme current-color-scheme)
-           (setf es/gnome-color-scheme current-color-scheme)
-
-           (consult-theme
-            (cond
-             ((equal current-color-scheme "default")
-              es/light-theme)
-             ((equal current-color-scheme "prefer-dark")
-              es/dark-theme))))))
-
-     (defvar es/gnome-theme-timer nil)
-     (defvar es/gnome-theme-poll-interval 1)
-
-     (defun es/start-gnome-polling ()
-       "Check for the current gnome theme (ie light or dark), periodically"
-       (interactive)
-       (unless es/gnome-theme-timer
-         (es/update-theme)
-         (setf es/gnome-theme-timer
-               (run-at-time 0 es/gnome-theme-poll-interval 'es/update-theme))))
-
-     (defun es/stop-gnome-polling ()
-       "Stop checking for the current gnome theme (ie light or dark)"
-       (interactive)
-       (when es/gnome-theme-timer
-         (cancel-timer es/gnome-theme-timer)
-         (setf es/gnome-theme-timer nil)))
-   #+end_src
-
-    #+begin_src elisp
-      (use-package doom-themes
-        :ensure t
-        :config
-        ;; Global settings (defaults)
-        (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
-              doom-themes-enable-italic t) ; if nil, italics is universally disabled
-
-        ;; poll gnome themes automatically
-        (es/start-gnome-polling)
-
-        ;; Enable flashing mode-line on errors
-        (doom-themes-visual-bell-config)
-        ;; Enable custom neotree theme (all-the-icons must be installed!)
-        ;; (doom-themes-neotree-config)
-        ;; or for treemacs users
-        (setq doom-themes-treemacs-theme "doom-colors") ; use "doom-colors" for less minimal icon theme
-        (doom-themes-treemacs-config)
-        ;; Corrects (and improves) org-mode's native fontification.
-        (doom-themes-org-config))
-    #+end_src
-** ligatures
-   I wanted code ligatures and nice looking fonts to match Ghostty, I use
-   Jetbrains Mono
-   
-   #+begin_src emacs-lisp
-     (use-package ligature
-       :config
-       (ligature-set-ligatures 'prog-mode '("--" "---" "==" "===" "!=" "!==" "=!="
-                                            "=:=" "=/=" "<=" ">=" "&&" "&&&" "&=" "++" "+++" "***" ";;" "!!"
-                                            "??" "???" "?:" "?." "?=" "<:" ":<" ":>" ">:" "<:<" "<>" "<<<" ">>>"
-                                            "<<" ">>" "||" "-|" "_|_" "|-" "||-" "|=" "||=" "##" "###" "####"
-                                            "#{" "#[" "]#" "#(" "#?" "#_" "#_(" "#:" "#!" "#=" "^=" "<$>" "<$"
-                                            "$>" "<+>" "<+" "+>" "<*>" "<*" "*>" "</" "</>" "/>" "<!--" "<#--"
-                                            "-->" "->" "->>" "<<-" "<-" "<=<" "=<<" "<<=" "<==" "<=>" "<==>"
-                                            "==>" "=>" "=>>" ">=>" ">>=" ">>-" ">-" "-<" "-<<" ">->" "<-<" "<-|"
-                                            "<=|" "|=>" "|->" "<->" "<~~" "<~" "<~>" "~~" "~~>" "~>" "~-" "-~"
-                                            "~@" "[||]" "|]" "[|" "|}" "{|" "[<" ">]" "|>" "<|" "||>" "<||"
-                                            "|||>" "<|||" "<|>" "..." ".." ".=" "..<" ".?" "::" ":::" ":=" "::="
-                                            ":?" ":?>" "/*" "*/" "/=" "//=" "/==" "@_" "__" "???"
-                                            "<:<" ";;;"))
-       
-       (global-ligature-mode t))
-
-     (set-face-attribute 'default nil :font "Jetbrains Mono-10.5")
-   #+end_src
-
-** lsp-mode 
-   the default clangd version used by LSP is 15.0.6, which I found is
-   inconsistent with the system clang in my C projects.  Following the
-   documentation found on the [[https://emacs-lsp.github.io/lsp-mode/page/lsp-clangd/][emacs LSP website]], the ~lsp-clangd-version~
-   variable must be set before the lsp is loaded.
-
-   Technically since we are using Elpaca, this /could/ be placed anywhere in
-   this file, as ~lsp-mode~ will be loaded asynchronously after this file is
-   loaded.
-   #+begin_src elisp
-     (setq lsp-clangd-version "19.1.0")
-   #+end_src
-
-   queue LSP mode for updating/loading and do base configuration.
-   #+begin_src elisp
-     (use-package lsp-mode
-       :ensure t
-       :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
-              (c-mode . lsp)
-              (rust-mode . lsp)
-              (zig-mode . lsp)
-              (go-mode . lsp)
-              ;; if you want which-key integration
-              (lsp-mode . lsp-enable-which-key-integration))
-       :commands lsp
-       :init
-       ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
-       (setq lsp-keymap-prefix "C-c l")
-
-       ;; personal LSP preferences.
-       (setq gc-cons-threshold 160000000
-             read-process-output-max (* 1024 1024)  ;; 1mb
-
-             lsp-headerline-breadcrumb-enable t
-             lsp-headerline-breadcrumb-enable-symbol-numbers nil
-             lsp-headerline-breadcrumb-icons-enable t
-             lsp-on-type-formatting nil))
-
-     ;; optionally
-     (use-package lsp-ui
-       :ensure t
-       :commands lsp-ui-mode
-       :init
-       (setq lsp-ui-doc-delay 0.25
-             lsp-ui-doc-show-with-cursor t
-             lsp-ui-doc-show-with-mouse nil
-             lsp-ui-sideline-show-code-actions t
-             lsp-ui-sideline-show-hover nil
-             lsp-ui-sideline-show-diagnostics t
-             lsp-ui-doc-enable t
-             lsp-ui-doc-use-webkit nil
-             lsp-ui-doc-glance t))
-
-     ;; if you are helm user
-     ;;(use-package helm-lsp :commands helm-lsp-workspace-symbol)
-     ;; if you are ivy user
-     ;;(use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
-     (use-package lsp-treemacs :ensure t :commands lsp-treemacs-errors-list)
-
-     ;; optionally if you want to use debugger
-     ;;(use-package dap-mode)
-     ;; (use-package dap-LANGUAGE) ;; to load the dap adapter for your language
-     (use-package dap-mode :ensure t)
-
-     ;;(add-hook 'lsp-mode-hook 'lsp-headerline-breadcrumb-mode)
-    #+end_src
-   
-** magit
-   #+begin_src elisp
-     (use-package magit
-       :ensure t)
-   #+end_src
-
-** transient
-   Note, this package has given me issues issues with its dependency on seq.
-   see [[https://github.com/progfolio/elpaca/issues/216][this github issue]] for clarification.
-   
-   #+begin_src elisp
-     (use-package transient
-       :ensure t)
-   #+end_src
-
-** nerd-icons
-   #+begin_src elisp
-     (use-package nerd-icons
-       :ensure t)
-
-     (use-package all-the-icons
-       :ensure t)
-
-     (use-package treemacs-all-the-icons
-       :ensure t)
-   #+end_src
-** treemacs
-   #+begin_src elisp
-     (use-package treemacs
-       :ensure t
-       :defer t)
-   #+end_src
-** org-anki
-
-   #+begin_src elisp
-     ;(use-package org-anki
-     ;  :ensure (org-anki :host github :repo "eyeinsky/org-anki"))
-   #+end_src
-   
-* Programming Stuff
-** comment-tags
-   #+begin_src elisp
-     (use-package comment-tags
-       :ensure t
-       :config
-       (setf comment-tags-case-sensitive t)
-       (setf comment-tags-require-colon nil)
-       :hook
-       (prog-mode . comment-tags-mode)
-       (c-mode    . comment-tags-mode))
-   #+end_src
-** indent-barsa
-   There is an optional stipple mode that can provide potentially better looking
-   indent bars, if your particular build of emacs supports it. I have it
-   disabled for now. This package also uses emacs treesit to determine where the
-   indentations should go. however, *you need to install the language grammar
-   for any language you want to support with this* use
-   ~treesit-install-language-grammar~
-    
- #+begin_src elisp
-   (use-package indent-bars
-     :ensure (:host github :repo "jdtsmith/indent-bars")
-     :hook
-     (prog-mode . indent-bars-mode)
-     :config
-     (require 'indent-bars-ts)
-
-     (setf indent-bars-prefer-character t
-           indent-bars-no-stipple-char ?│
-           indent-bars-treesit-support t
-           indent-bars-treesit-ignore-wrap t
-           indent-bars-treesit-ignore-blank-lines-types t
-           indent-bars-no-descent-string t
-           indent-bars-treesit-support t
-           indent-bars-no-descend-lists '()
-           indent-bars-treesit-wrap
-           '((c argument_list
-                parameter_list
-                init_declarator)
-             (python argument_list
-                     parameters
-                     list
-                     list_comprehension
-                     dictionary
-                     dictionary_comprehension
-                     parenthesized_expression
-                     subscript))))
- #+end_src
-
- #+results:
-** imenu-list
-   Show function/structs, etc in a separate buffer for easy navigation in larger
-   files.
-   
-   #+begin_src elisp
-     (use-package imenu-list
-      :ensure (:host github :repo "bmag/imenu-list")
-      :config
-      (global-set-key (kbd "C-c i") #'imenu-list-smart-toggle)
-      (setf imenu-list-focus-after-activation t))
-   #+end_src
-** rust-mode
-   #+begin_src elisp
-     (use-package rust-mode
-       :ensure t
-       :hook (rust-mode . #'prettify-symbols-mode))
-   #+end_src
-** lua-mode
-   #+begin_src elisp
-     (use-package lua-mode
-       :ensure (:host github :repo "immerrr/lua-mode")
-       :custom
-       (lua-indent-level 4))
-   #+end_src
-** zig mode
-   #+begin_src elisp
-      (use-package zig-mode
-        :ensure t)
-   #+end_src
-
-   The Zig compiler doesn't play nice with the ~compilation-mode~ output buffer,
-   because is uses some more niche ANSI escape codes (specificially, character
-   set switching) in it's output.  I mostly fixed this by stripping out any
-   remaining ANSI escape codes after the default parser colorizes the buffer.
-   There is still some garbage text left behind from the alternate character
-   set, but for my use case I can easily ignore it.
-
-   #+begin_src elisp
-     (defconst all-ansi-escape-sequences-regexp
-       (rx "\e"
-           (|
-            ;; OSC sequence
-            (seq
-             "]"
-             (* (in "\x08-\x0D"))
-             (* (in "\x20-\x7E"))
-             (| "\a" "\e\\"))
-            ;; Regular Sequence
-            (seq 
-             (in "[" "(")
-             (* (in "\x30-\x3F"))
-             (* (in "\x20-\x2F"))
-             (in "\x40-\x7E"))
-            ;; M (reverse index?)
-            (+ "M"))))
-
-     (defun es/colorize-compilation-buffer ()
-       (ansi-color-apply-on-region compilation-filter-start (point))
-
-       ;; delete any remaining escape sequences from output
-       (save-excursion
-         (goto-char compilation-filter-start)
-         (while (re-search-forward all-ansi-escape-sequences-regexp
-                                   (buffer-end 1)
-                                   t)
-           (delete-region (match-beginning 0) (match-end 0))
-           )))
-
-     (add-hook 'compilation-filter-hook 'es/colorize-compilation-buffer)
-     #+end_src
-   
-** go-mode
-   Go recommends running the formatter to deal with formatting issues.  I don't
-   want to have lots of formatting diffs in my commits, so I add the
-   ~gofmt-before-save~ function to the ~before-save-hook~ after go mode is
-   loaded.
-
-   #+begin_src emacs-lisp
-     (use-package go-mode
-       :ensure t
-       :config (add-hook 'before-save-hook 'gofmt-before-save))
-   #+end_src
-
-   Gofmt uses tabs for indentation instead of spaces, make Emacs use tabs in
-   these situations.
-
-   #+begin_src emacs-lisp
-     (defun es/go-mode-opts ()
-       (setf tab-width 4)
-       (indent-tabs-mode)
-       (indent-bars-reset))
-
-     (add-hook 'go-mode-hook 'es/go-mode-opts)
-   #+end_src
-** docker stuff
-   Download YAML mode for working with docker compose files.
-   #+begin_src emacs-lisp
-     (use-package yaml-mode
-       :ensure t
-       :mode
-       ("\\.yaml\\'" "\\.yml\\'")
-       :custom-face
-       (font-lock-variable-name-face ((t (:foreground "#cba6f7"))))
-       :config)
-   #+end_src
-
-   #+begin_src emacs-lisp
-     (use-package dockerfile-mode
-       :ensure t)
-   #+end_src
-
-
-** sly
-   #+begin_src elisp
-     (use-package sly
-       :ensure (:host github :repo "joaotavora/sly"))
-   #+end_src
-   
-** smartparens
-   #+begin_src elisp
-     (use-package smartparens
-       :init (smartparens-global-mode)
-       :hook (prog-mode text-mode markdown-mode)
-       :config
-       (require 'smartparens-config))
-   #+end_src
-   
-* Completion/Ergonomics
-** company
-   #+begin_src elisp
-     (use-package company
-       :ensure t
-       :hook (after-init-hook . global-company-mode))
-   #+end_src
-
-** consult
-   #+begin_src elisp
-     (use-package consult
-       :ensure t)
-   #+end_src
-
-** DISABLED helm 
-   I like helm, it provides pretty completion, but it is sort of awkward.  There
-   is a bit of learning curve with file searching.  It also doesn't play well
-   with consult.  For these reasons, I have ditched it in favor of ~vertico~
-
-   #+begin_src 
-     (use-package ac-helm
-       :init (helm-mode 1)
-       :ensure t
-       :config 
-       (setf helm-window-prefer-horizontal-split t) 
-       (global-set-key (kbd "M-x") 'helm-M-x)
-       (global-set-key (kbd "C-x C-f") 'helm-find-files)
-       (global-set-key (kbd "C-x C-b") 'helm-buffers-list)
-       (global-set-key (kbd "M-g i") 'helm-imenu)
-       (setf helm-display-header-line nil)
-       (set-face-attribute 'helm-source-header nil :height 0.9)
-       (helm-autoresize-mode 1)
-       (setf helm-split-window-in-side-p t)
-       (setf helm-always-two-windows t))
-    #+end_src
-
-** vertico
-   this is an alternative to helm.  It provides completion in various contexts.
-   I believe it is more lightweight as well.
-
-   Importantly, it plays nice with consult.  I like consult, mostly for
-   ~consult-theme~, so I am using this for my completion needs now.
-
-   vertico also presents completions options in a variety of ways, such as in
-   buffers, or in a grid layout.
-   #+begin_src elisp
-     (use-package vertico
-       :ensure t
-       :init (vertico-mode)
-       :config
-       ;; Enable vertico-multiform
-       (vertico-multiform-mode)
-
-       ;; Configure the display per command.
-       ;; Use a buffer with indices for imenu
-       ;; and a flat (Ido-like) menu for M-x.
-       (setq vertico-multiform-commands
-             '((consult-imenu buffer indexed)
-               (consult-buffer buffer indexed)
-               (consult-outline buffer indexed)
-               (execute-extended-command grid)))
-
-       ;; Configure the display per completion category.
-       ;; Use the grid display for files and a buffer
-       ;; for the consult-grep commands.
-       (setq vertico-multiform-categories
-             '((file grid)
-               (consult-grep buffer))))
-   #+end_src
-
-** hotfuzz
-   adds fuzzy completion to 
-
-   #+begin_src elisp
-     (use-package hotfuzz
-       :ensure t)
-
-     (setq completion-styles '(hotfuzz))
-   #+end_src
-   
-** which-key
-   #+begin_src elisp
-     (use-package which-key
-       :init (which-key-mode 1)
-       :config
-       (setq which-key-side-window-location 'bottom
-	     which-key-sort-order #'which-key-key-order-alpha
-	     which-key-add-column-padding 1
-	     which-key-max-display-columns nil
-	     which-key-min-display-lines 6
-	     which-key-side-window-slot -10
-	     which-key-window-max-height 0.25
-	     which-key-idle-delay 0.4
-	     which-key-max-description-length 25
-	     which-key-allow-imprecise-window-fit t
-	     which-key-separator "  " ))
-    #+end_src
-    
-* Major Modes
-** General
-#+begin_src emacs-lisp
-  ;; remove title bar for a cleaner look
-  (add-to-list 'default-frame-alist '(undecorated-round . t))
-  (add-to-list 'default-frame-alist '(undecorated . t))
-#+end_src
+* General Configuration
+  #+begin_src emacs-lisp
+    ;; remove title bar for a cleaner look
+    (add-to-list 'default-frame-alist '(undecorated-round . t))
+    (add-to-list 'default-frame-alist '(undecorated . t))
+  #+end_src
    
   #+begin_src elisp
     (global-display-line-numbers-mode 1)
@@ -572,215 +60,728 @@
      (add-hook 'text-mode-hook #'es/buffer-opts)
    #+end_src
 
-** org-mode
-   #+begin_src elisp
-     (setf org-adapt-indentation t)
-     (setf org-list-allow-alphabetical t)
+* Major Modes
+** Programming Language Modes
+*** prog-mode
+    these are general options I want set for all programming modes
 
-     (use-package org-bullets
-       :init (add-hook 'org-mode-hook 'org-bullets-mode))
+    #+begin_src elisp
+      (defun es/prog-mode-opts ()
+          (set-fill-column 80)
+          (keymap-local-set "C-c e" #'consult-flymake)
+          (keymap-local-set "C-c E" #'consult-compile-error))
 
-     (use-package htmlize)
+      (add-hook 'prog-mode-hook #'es/prog-mode-opts)
+    #+end_src
+
+*** lisp-mode
+    #+begin_src elisp
+      (keymap-global-set "C->" 'sp-slurp-hybrid-sexp)
+      (keymap-global-set "C-<" 'sp-forward-barf-sexp)
+     
+      (defun ethan-sly-keybinds ()
+        (interactive)
+        (keymap-set sly-mrepl-mode-map "C-M-p" 'sly-mrepl-previous-prompt)
+        (keymap-set sly-mrepl-mode-map "C-M-n" 'sly-mrepl-next-prompt))
+
+      (defun es/lisp-config ()
+        (interactive)
+        (keymap-set lisp-mode-map "C-k" 'sp-kill-hybrid-sexp)
+        (indent-bars-mode -1))
+
+      (add-hook 'sly-mrepl-mode-hook #'ethan-sly-keybinds)
+      (add-hook 'lisp-mode-hook #'es/lisp-config)
+    #+end_src
+
+*** rust-mode
+    #+begin_src elisp
+      (use-package rust-mode
+        :ensure t
+        :hook (rust-mode . #'prettify-symbols-mode))
+    #+end_src
+*** lua-mode
+    #+begin_src elisp
+      (use-package lua-mode
+        :ensure (:host github :repo "immerrr/lua-mode")
+        :custom
+        (lua-indent-level 4))
+    #+end_src
+*** zig mode
+    #+begin_src elisp
+       (use-package zig-mode
+         :ensure t)
+    #+end_src
+
+    The Zig compiler doesn't play nice with the ~compilation-mode~ output buffer,
+    because is uses some more niche ANSI escape codes (specificially, character
+    set switching) in it's output.  I mostly fixed this by stripping out any
+    remaining ANSI escape codes after the default parser colorizes the buffer.
+    There is still some garbage text left behind from the alternate character
+    set, but for my use case I can easily ignore it.
+
+    #+begin_src elisp
+      (defconst all-ansi-escape-sequences-regexp
+        (rx "\e"
+            (|
+             ;; OSC sequence
+             (seq
+              "]"
+              (* (in "\x08-\x0D"))
+              (* (in "\x20-\x7E"))
+              (| "\a" "\e\\"))
+             ;; Regular Sequence
+             (seq 
+              (in "[" "(")
+              (* (in "\x30-\x3F"))
+              (* (in "\x20-\x2F"))
+              (in "\x40-\x7E"))
+             ;; M (reverse index?)
+             (+ "M"))))
+
+      (defun es/colorize-compilation-buffer ()
+        (ansi-color-apply-on-region compilation-filter-start (point))
+
+        ;; delete any remaining escape sequences from output
+        (save-excursion
+          (goto-char compilation-filter-start)
+          (while (re-search-forward all-ansi-escape-sequences-regexp
+                                    (buffer-end 1)
+                                    t)
+            (delete-region (match-beginning 0) (match-end 0))
+            )))
+
+      (add-hook 'compilation-filter-hook 'es/colorize-compilation-buffer)
+      #+end_src
+   
+*** go-mode
+    Go recommends running the formatter to deal with formatting issues.  I don't
+    want to have lots of formatting diffs in my commits, so I add the
+    ~gofmt-before-save~ function to the ~before-save-hook~ after go mode is
+    loaded.
+
+    #+begin_src emacs-lisp
+      (use-package go-mode
+        :ensure t
+        :config (add-hook 'before-save-hook 'gofmt-before-save))
+    #+end_src
+
+    Gofmt uses tabs for indentation instead of spaces, make Emacs use tabs in
+    these situations.
+
+    #+begin_src emacs-lisp
+      (defun es/go-mode-opts ()
+        (setf tab-width 4)
+        (indent-tabs-mode)
+        (indent-bars-reset))
+
+      (add-hook 'go-mode-hook 'es/go-mode-opts)
+    #+end_src
+*** c-mode
+    default c-mode settings
+    #+begin_src elisp
+      (setq-default c-basic-offset 4)
+      (setq-default indent-tabs-mode nil)
+
+      (c-add-style "my-c-style"
+                   '("gnu"
+                     (c-basic-offset . 4)
+                     (c-offsets-alist
+                      (defun-block-intro      . +)   ; first line inside a function body
+                      (statement-block-intro  . +)   ; first line inside any other block (if/for/while/etc.)
+                      (substatement-open      . 0)   ; the { itself, e.g. after if (...)
+                      (substatement           . +)   ; single-statement body with no braces
+                      (block-close            . 0)   ; the closing }
+                      (statement-cont         . +)   ; continuation of a statement onto next line
+                      (arglist-intro          . +)   ; first arg on its own line
+                      (arglist-cont-nonempty  . +)
+                      (arglist-close          . 0)
+                      (case-label             . +)   ; case/default labels inside switch
+                      (statement-case-intro   . +)   ; statement after a case label
+                      (access-label           . 0)   ; public:/private:/protected: (C++, harmless in C)
+                      (member-init-intro      . +)
+                      (innamespace            . +))))
+
+      (setf c-default-style "my-c-style")
+    #+end_src
+
+    per-buffer c-mode settings
+    #+begin_src elisp
+      (defun es/c-buffer-opts ()
+        (setf c-basic-offset 4)
+
+        (indent-bars-reset)
+
+        ;; this disables annoying behavior when pressing enter on the ends of lines.
+        (define-key c-mode-base-map "\C-m" 'c-context-line-break)
+
+        ;; enable syntactic indentation (default)
+        (c-toggle-syntactic-indentation 1))
+
+      (add-hook 'c-mode-common-hook 'es/c-buffer-opts)
+      (define-key c-mode-map (kbd "C-c c") 'es/center-comment)
+    #+end_src
+
+    this is a function to create a centered comment header.
+    #+begin_src elisp
+      (defun es/center-comment ()
+        (interactive)
+        ;; 1. detect the comment style, either /* or //
+        ;; 2. get the comment text
+        ;; 3. get comment length
+        ;; 4. insert centered comment
+
+        (beginning-of-line)
+        (skip-chars-forward "[:blank:]")
+
+        (let ((indent (current-column))
+              (comment-type (cond ((search-forward "//" (line-end-position) t) 'line)
+                                  ((search-forward "/*" (line-end-position) t) 'block)))
+              (heading (string-clean-whitespace
+                        (buffer-substring (point) (line-end-position))))
+              fill-char
+              beg-str
+              end-str
+              fill-len)
+
+          (cond ((eq comment-type 'line)
+                 (setf fill-char ?/
+                       beg-str "//"
+                       end-str ""))
+                ((eq comment-type 'block)
+                 (setf fill-char ?*
+                       beg-str "/*"
+                       end-str "*/")
+                 (if (equal "*/" (substring heading
+                                            (- (length heading) 2)
+                                            (length heading)))
+                     (setf heading (string-clean-whitespace
+                                    (substring heading 0 (- (length heading) 2)))))))
+
+          (setf heading (concat " " heading " ")
+                fill-len (- fill-column
+                            indent
+                            (length heading)))
+
+          ;; comment-type is nil when there is no comment at (point)
+          (when (and comment-type (< 0 fill-len))
+            (delete-line)
+
+            (let ((fill-l (- (/ fill-len 2) (length beg-str)))
+                  (fill-r (- (ceiling (/ fill-len 2.0)) (length end-str))))
+
+              (mapcar #'insert
+                      (list (make-string indent #x20)
+                            beg-str
+                            (make-string fill-l fill-char) 
+                            heading
+                            (make-string fill-r fill-char)
+                            end-str
+                            "\n"))))))
+    #+end_src
+
+*** Makefile Mode
+    #+begin_src emacs-lisp
+      (defun es/makefile-mode-opts ()
+        (interactive)
+
+        (indent-tabs-mode 1))
+
+      (add-hook 'makefile-mode-hook 'es/makefile-mode-opts)
+    #+end_src
+
+** Markup/Config File Modes
+*** org-mode
+    #+begin_src elisp
+      (setf org-adapt-indentation t)
+      (setf org-list-allow-alphabetical t)
+
+      (use-package org-bullets
+        :init (add-hook 'org-mode-hook 'org-bullets-mode))
+
+      (use-package htmlize)
      
 
-     (defun es/org-mode ()
-       (when (equal (buffer-name) "config.org")
-         (lsp-disconnect)
-         (lsp-mode -1))
+      (defun es/org-mode ()
+        (when (equal (buffer-name) "config.org")
+          (lsp-disconnect)
+          (lsp-mode -1))
+        (indent-bars-mode -1))
+
+      (add-hook 'org-mode-hook 'es/org-mode)
+    #+end_src
+
+    Org needs htmlize to export fancy code src blocks.  Also, indent bars needs
+    to be disabled for this to work.
+
+   #+begin_src elisp
+     (defun es/htmlize-mods ()
        (indent-bars-mode -1))
 
-     (add-hook 'org-mode-hook 'es/org-mode)
+     (add-hook 'htmlize-before-hook 'es/htmlize-mods)
    #+end_src
 
-   Org needs htmlize to export fancy code src blocks.  Also, indent bars needs
-   to be disabled for this to work.
+    Org mode seems to have a bug/limiting factor that prevents multiline emphasis from displaying.
+    that is, the following paragraph should be entirely italic:
 
+    /Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+    tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+    quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodop
+    consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+    cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+    proident, sunt in culpa qui officia deserunt mollit anim id est laborum./
+
+    #+begin_src elisp
+      (with-eval-after-load 'org
+        ;; Allow multiple line Org emphasis markup.
+        ;; http://emacs.stackexchange.com/a/13828/115
+        (setcar (nthcdr 4 org-emphasis-regexp-components) 20) ;Up to 20 lines, default is just 1
+        ;; Below is needed to apply the modified `org-emphasis-regexp-components'
+        ;; settings from above.
+        (org-set-emph-re 'org-emphasis-regexp-components org-emphasis-regexp-components))
+    #+end_src
+
+    the following will enable org-babel to execute C source code in source
+    blcoks.  Apparently, it is important to use a capital "C" in the source
+    blocks.
+   
+    #+begin_src elisp
+      (org-babel-do-load-languages
+       'org-babel-load-languages '((C . t)))
+    #+end_src
+
+    use a better program for LATEX output:
+    #+begin_src emacs-lisp
+      (setq org-latex-pdf-process
+            '("xelatex -interaction nonstopmode %f" "xelatex -interaction nonstopmode %f"))
+    #+end_src
+   
+*** yaml-mode
+    Download YAML mode for working with docker compose files.
+    #+begin_src emacs-lisp
+      (use-package yaml-mode
+        :ensure t
+        :mode
+        ("\\.yaml\\'" "\\.yml\\'")
+        :custom-face
+        (font-lock-variable-name-face ((t (:foreground "#cba6f7"))))
+        :config)
+    #+end_src
+
+*** dockerfile-mode
+    #+begin_src emacs-lisp
+      (use-package dockerfile-mode
+        :ensure t)
+    #+end_src
+
+** Miscellaneous
+*** magit
+    #+begin_src elisp
+      (use-package magit
+        :ensure t)
+    #+end_src
+  
+*** imenu-list
+    Show function/structs, etc in a separate buffer for easy navigation in larger
+    files.
+   
+    #+begin_src elisp
+      (use-package imenu-list
+       :ensure (:host github :repo "bmag/imenu-list")
+       :config
+       (global-set-key (kbd "C-c i") #'imenu-list-smart-toggle)
+       (setf imenu-list-focus-after-activation t))
+    #+end_src
+
+*** sly
+    #+begin_src elisp
+      (use-package sly
+        :ensure (:host github :repo "joaotavora/sly"))
+    #+end_src
+   
+* Minor Modes
+** Aesthetics
+*** ligatures
+    I wanted code ligatures and nice looking fonts to match Ghostty, I use
+    Jetbrains Mono
+   
+    #+begin_src emacs-lisp
+      (use-package ligature
+        :config
+        (ligature-set-ligatures 'prog-mode '("--" "---" "==" "===" "!=" "!==" "=!="
+                                             "=:=" "=/=" "<=" ">=" "&&" "&&&" "&=" "++" "+++" "***" ";;" "!!"
+                                             "??" "???" "?:" "?." "?=" "<:" ":<" ":>" ">:" "<:<" "<>" "<<<" ">>>"
+                                             "<<" ">>" "||" "-|" "_|_" "|-" "||-" "|=" "||=" "##" "###" "####"
+                                             "#{" "#[" "]#" "#(" "#?" "#_" "#_(" "#:" "#!" "#=" "^=" "<$>" "<$"
+                                             "$>" "<+>" "<+" "+>" "<*>" "<*" "*>" "</" "</>" "/>" "<!--" "<#--"
+                                             "-->" "->" "->>" "<<-" "<-" "<=<" "=<<" "<<=" "<==" "<=>" "<==>"
+                                             "==>" "=>" "=>>" ">=>" ">>=" ">>-" ">-" "-<" "-<<" ">->" "<-<" "<-|"
+                                             "<=|" "|=>" "|->" "<->" "<~~" "<~" "<~>" "~~" "~~>" "~>" "~-" "-~"
+                                             "~@" "[||]" "|]" "[|" "|}" "{|" "[<" ">]" "|>" "<|" "||>" "<||"
+                                             "|||>" "<|||" "<|>" "..." ".." ".=" "..<" ".?" "::" ":::" ":=" "::="
+                                             ":?" ":?>" "/*" "*/" "/=" "//=" "/==" "@_" "__" "???"
+                                             "<:<" ";;;"))
+       
+        (global-ligature-mode t))
+
+      (set-face-attribute 'default nil :font "Jetbrains Mono-10.5")
+    #+end_src
+
+*** doom-modeline
+    #+begin_src elisp
+      (use-package doom-modeline
+        :ensure t
+        :init (doom-modeline-mode 1))
+
+      (setq doom-modeline-icon t)
+      (setq doom-modeline-enable-word-count t)
+      (setq doom-modeline-buffer-encoding t)
+      (setq doom-modeline-indent-info t)
+      (setq doom-modeline-total-line-number t)
+      (setq doom-modeline-lsp t)
+    #+end_src
+    
+*** doom-themes
+    My favourite light themes are:
+    - default
+    - doom-acario-light
+    - doom-one-light
+    - tango
+
+    My favourite dark themes are:
+    - doom-dark+
+    - modus-vivendi
+
+    #+begin_src elisp
+      (defvar es/dark-theme 'modus-vivendi)
+      (defvar es/light-theme 'tango)
+    #+end_src
+
+    The following code will track the current desktop theme setting.  It will
+    periodically poll for the desktop theme, then change the Emacs theme to a
+    light/dark theme to match.  Polling is enabled at startup, after doom-themes
+    are loaded so that the themes are available.
+   
+    #+begin_src emacs-lisp
+      (defun es/get-gnome-color-scheme ()
+        "runs gsetting command to get the current gnome color scheme.  Also
+      unwraps quotes that surround the value."
+        (let* ((cmd "gsettings get org.gnome.desktop.interface color-scheme")
+               (trim-re "[[:space:]\r\n']+")
+               (default-directory "/tmp/")) ;; only run command on desktop.
+          (string-trim (shell-command-to-string cmd) trim-re trim-re)))
+
+      (defvar es/gnome-color-scheme nil
+        "the current color scheme set by the gnome desktop. (ie, default or
+      prefer-dark)")
+
+      (defun es/update-theme ()
+        "Changes the emacs theme to the theme specified by the gnome desktop
+      setting.  Uses the the light/dark theme settings specified in this config."
+        (let ((current-color-scheme (es/get-gnome-color-scheme)))
+          (unless (equal es/gnome-color-scheme current-color-scheme)
+            (setf es/gnome-color-scheme current-color-scheme)
+
+            (consult-theme
+             (cond
+              ((equal current-color-scheme "default")
+               es/light-theme)
+              ((equal current-color-scheme "prefer-dark")
+               es/dark-theme))))))
+
+      (defvar es/gnome-theme-timer nil)
+      (defvar es/gnome-theme-poll-interval 1)
+
+      (defun es/start-gnome-polling ()
+        "Check for the current gnome theme (ie light or dark), periodically"
+        (interactive)
+        (unless es/gnome-theme-timer
+          (es/update-theme)
+          (setf es/gnome-theme-timer
+                (run-at-time 0 es/gnome-theme-poll-interval 'es/update-theme))))
+
+      (defun es/stop-gnome-polling ()
+        "Stop checking for the current gnome theme (ie light or dark)"
+        (interactive)
+        (when es/gnome-theme-timer
+          (cancel-timer es/gnome-theme-timer)
+          (setf es/gnome-theme-timer nil)))
+    #+end_src
+
+     #+begin_src elisp
+       (use-package doom-themes
+         :ensure t
+         :config
+         ;; Global settings (defaults)
+         (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+               doom-themes-enable-italic t) ; if nil, italics is universally disabled
+
+         ;; poll gnome themes automatically
+         (es/start-gnome-polling)
+
+         ;; Enable flashing mode-line on errors
+         (doom-themes-visual-bell-config)
+         ;; Enable custom neotree theme (all-the-icons must be installed!)
+         ;; (doom-themes-neotree-config)
+         ;; or for treemacs users
+         (setq doom-themes-treemacs-theme "doom-colors") ; use "doom-colors" for less minimal icon theme
+         (doom-themes-treemacs-config)
+         ;; Corrects (and improves) org-mode's native fontification.
+         (doom-themes-org-config))
+     #+end_src
+*** nerd-icons
+    #+begin_src elisp
+      (use-package nerd-icons
+        :ensure t)
+
+      (use-package all-the-icons
+        :ensure t)
+
+      (use-package treemacs-all-the-icons
+        :ensure t)
+    #+end_src
+
+*** comment-tags
+    #+begin_src elisp
+      (use-package comment-tags
+        :ensure t
+        :config
+        (setf comment-tags-case-sensitive t)
+        (setf comment-tags-require-colon nil)
+        :hook
+        (prog-mode . comment-tags-mode)
+        (c-mode    . comment-tags-mode))
+    #+end_src
+
+*** indent-bars
+    There is an optional stipple mode that can provide potentially better looking
+    indent bars, if your particular build of emacs supports it. I have it
+    disabled for now. This package also uses emacs treesit to determine where the
+    indentations should go. however, *you need to install the language grammar
+    for any language you want to support with this* use
+    ~treesit-install-language-grammar~
+    
   #+begin_src elisp
-    (defun es/htmlize-mods ()
-      (indent-bars-mode -1))
+    (use-package indent-bars
+      :ensure (:host github :repo "jdtsmith/indent-bars")
+      :hook
+      (prog-mode . indent-bars-mode)
+      :config
+      (require 'indent-bars-ts)
 
-    (add-hook 'htmlize-before-hook 'es/htmlize-mods)
+      (setf indent-bars-prefer-character t
+            indent-bars-no-stipple-char ?│
+            indent-bars-treesit-support t
+            indent-bars-treesit-ignore-wrap t
+            indent-bars-treesit-ignore-blank-lines-types t
+            indent-bars-no-descent-string t
+            indent-bars-treesit-support t
+            indent-bars-no-descend-lists '()
+            indent-bars-treesit-wrap
+            '((c argument_list
+                 parameter_list
+                 init_declarator)
+              (python argument_list
+                      parameters
+                      list
+                      list_comprehension
+                      dictionary
+                      dictionary_comprehension
+                      parenthesized_expression
+                      subscript))))
   #+end_src
 
-   Org mode seems to have a bug/limiting factor that prevents multiline emphasis from displaying.
-   that is, the following paragraph should be entirely italic:
+  #+results:
+** Programming Ergonomics
+*** lsp-mode
+    the default clangd version used by LSP is 15.0.6, which I found is
+    inconsistent with the system clang in my C projects.  Following the
+    documentation found on the [[https://emacs-lsp.github.io/lsp-mode/page/lsp-clangd/][emacs LSP website]], the ~lsp-clangd-version~
+    variable must be set before the lsp is loaded.
 
-   /Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
-   tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-   quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodop
-   consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-   cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-   proident, sunt in culpa qui officia deserunt mollit anim id est laborum./
+    Technically since we are using Elpaca, this /could/ be placed anywhere in
+    this file, as ~lsp-mode~ will be loaded asynchronously after this file is
+    loaded.
+    #+begin_src elisp
+      (setq lsp-clangd-version "19.1.0")
+    #+end_src
 
-   #+begin_src elisp
-     (with-eval-after-load 'org
-       ;; Allow multiple line Org emphasis markup.
-       ;; http://emacs.stackexchange.com/a/13828/115
-       (setcar (nthcdr 4 org-emphasis-regexp-components) 20) ;Up to 20 lines, default is just 1
-       ;; Below is needed to apply the modified `org-emphasis-regexp-components'
-       ;; settings from above.
-       (org-set-emph-re 'org-emphasis-regexp-components org-emphasis-regexp-components))
-   #+end_src
+    queue LSP mode for updating/loading and do base configuration.
+    #+begin_src elisp
+      (use-package lsp-mode
+        :ensure t
+        :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
+               (c-mode . lsp)
+               (rust-mode . lsp)
+               (zig-mode . lsp)
+               (go-mode . lsp)
+               ;; if you want which-key integration
+               (lsp-mode . lsp-enable-which-key-integration))
+        :commands lsp
+        :init
+        ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
+        (setq lsp-keymap-prefix "C-c l")
 
-   the following will enable org-babel to execute C source code in source
-   blcoks.  Apparently, it is important to use a capital "C" in the source
-   blocks.
+        ;; personal LSP preferences.
+        (setq gc-cons-threshold 160000000
+              read-process-output-max (* 1024 1024)  ;; 1mb
+
+              lsp-headerline-breadcrumb-enable t
+              lsp-headerline-breadcrumb-enable-symbol-numbers nil
+              lsp-headerline-breadcrumb-icons-enable t
+              lsp-on-type-formatting nil))
+
+      ;; optionally
+      (use-package lsp-ui
+        :ensure t
+        :commands lsp-ui-mode
+        :init
+        (setq lsp-ui-doc-delay 0.25
+              lsp-ui-doc-show-with-cursor t
+              lsp-ui-doc-show-with-mouse nil
+              lsp-ui-sideline-show-code-actions t
+              lsp-ui-sideline-show-hover nil
+              lsp-ui-sideline-show-diagnostics t
+              lsp-ui-doc-enable t
+              lsp-ui-doc-use-webkit nil
+              lsp-ui-doc-glance t))
+
+      ;; if you are helm user
+      ;;(use-package helm-lsp :commands helm-lsp-workspace-symbol)
+      ;; if you are ivy user
+      ;;(use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
+      (use-package lsp-treemacs :ensure t :commands lsp-treemacs-errors-list)
+
+      ;; optionally if you want to use debugger
+      ;;(use-package dap-mode)
+      ;; (use-package dap-LANGUAGE) ;; to load the dap adapter for your language
+      (use-package dap-mode :ensure t)
+
+      ;;(add-hook 'lsp-mode-hook 'lsp-headerline-breadcrumb-mode)
+     #+end_src
    
-   #+begin_src elisp
-     (org-babel-do-load-languages
-      'org-babel-load-languages '((C . t)))
-   #+end_src
-
-   use a better program for LATEX output:
-   #+begin_src emacs-lisp
-     (setq org-latex-pdf-process
-           '("xelatex -interaction nonstopmode %f" "xelatex -interaction nonstopmode %f"))
-   #+end_src
+*** treemacs
+    #+begin_src elisp
+      (use-package treemacs
+        :ensure t
+        :defer t)
+    #+end_src
+*** smartparens
+    #+begin_src elisp
+      (use-package smartparens
+        :init (smartparens-global-mode)
+        :hook (prog-mode text-mode markdown-mode)
+        :config
+        (require 'smartparens-config))
+    #+end_src
    
-** prog-mode
-   these are general options I want set for all programming modes
+*** company
+    #+begin_src elisp
+      (use-package company
+        :ensure t
+        :hook (after-init-hook . global-company-mode))
+    #+end_src
 
-   #+begin_src elisp
-     (defun es/prog-mode-opts ()
-         (set-fill-column 80)
-         (keymap-local-set "C-c e" #'consult-flymake)
-         (keymap-local-set "C-c E" #'consult-compile-error))
+** Global/General/Miscellaneous
+*** vertico
+    this is an alternative to helm.  It provides completion in various contexts.
+    I believe it is more lightweight as well.
 
-     (add-hook 'prog-mode-hook #'es/prog-mode-opts)
-   #+end_src
+    Importantly, it plays nice with consult.  I like consult, mostly for
+    ~consult-theme~, so I am using this for my completion needs now.
 
-** c-mode
-   default c-mode settings
-   #+begin_src elisp
-     (setq-default c-basic-offset 4)
-     (setq-default indent-tabs-mode nil)
+    vertico also presents completions options in a variety of ways, such as in
+    buffers, or in a grid layout.
+    #+begin_src elisp
+      (use-package vertico
+        :ensure t
+        :init (vertico-mode)
+        :config
+        ;; Enable vertico-multiform
+        (vertico-multiform-mode)
 
-     (c-add-style "my-c-style"
-                  '("gnu"
-                    (c-basic-offset . 4)
-                    (c-offsets-alist
-                     (defun-block-intro      . +)   ; first line inside a function body
-                     (statement-block-intro  . +)   ; first line inside any other block (if/for/while/etc.)
-                     (substatement-open      . 0)   ; the { itself, e.g. after if (...)
-                     (substatement           . +)   ; single-statement body with no braces
-                     (block-close            . 0)   ; the closing }
-                     (statement-cont         . +)   ; continuation of a statement onto next line
-                     (arglist-intro          . +)   ; first arg on its own line
-                     (arglist-cont-nonempty  . +)
-                     (arglist-close          . 0)
-                     (case-label             . +)   ; case/default labels inside switch
-                     (statement-case-intro   . +)   ; statement after a case label
-                     (access-label           . 0)   ; public:/private:/protected: (C++, harmless in C)
-                     (member-init-intro      . +)
-                     (innamespace            . +))))
+        ;; Configure the display per command.
+        ;; Use a buffer with indices for imenu
+        ;; and a flat (Ido-like) menu for M-x.
+        (setq vertico-multiform-commands
+              '((consult-imenu buffer indexed)
+                (consult-buffer buffer indexed)
+                (consult-outline buffer indexed)
+                (execute-extended-command grid)))
 
-     (setf c-default-style "my-c-style")
-   #+end_src
+        ;; Configure the display per completion category.
+        ;; Use the grid display for files and a buffer
+        ;; for the consult-grep commands.
+        (setq vertico-multiform-categories
+              '((file grid)
+                (consult-grep buffer))))
+    #+end_src
 
-   per-buffer c-mode settings
-   #+begin_src elisp
-     (defun es/c-buffer-opts ()
-       (setf c-basic-offset 4)
+*** DISABLED helm 
+    I like helm, it provides pretty completion, but it is sort of awkward.  There
+    is a bit of learning curve with file searching.  It also doesn't play well
+    with consult.  For these reasons, I have ditched it in favor of ~vertico~
 
-       (indent-bars-reset)
+    #+begin_src 
+      (use-package ac-helm
+        :init (helm-mode 1)
+        :ensure t
+        :config 
+        (setf helm-window-prefer-horizontal-split t) 
+        (global-set-key (kbd "M-x") 'helm-M-x)
+        (global-set-key (kbd "C-x C-f") 'helm-find-files)
+        (global-set-key (kbd "C-x C-b") 'helm-buffers-list)
+        (global-set-key (kbd "M-g i") 'helm-imenu)
+        (setf helm-display-header-line nil)
+        (set-face-attribute 'helm-source-header nil :height 0.9)
+        (helm-autoresize-mode 1)
+        (setf helm-split-window-in-side-p t)
+        (setf helm-always-two-windows t))
+     #+end_src
 
-       ;; this disables annoying behavior when pressing enter on the ends of lines.
-       (define-key c-mode-base-map "\C-m" 'c-context-line-break)
+*** hotfuzz
+    adds fuzzy completion to 
 
-       ;; enable syntactic indentation (default)
-       (c-toggle-syntactic-indentation 1))
+    #+begin_src elisp
+      (use-package hotfuzz
+        :ensure t)
 
-     (add-hook 'c-mode-common-hook 'es/c-buffer-opts)
-     (define-key c-mode-map (kbd "C-c c") 'es/center-comment)
-   #+end_src
+      (setq completion-styles '(hotfuzz))
+    #+end_src
+   
+*** consult
+    #+begin_src elisp
+      (use-package consult
+        :ensure t)
+    #+end_src
 
-   this is a function to create a centered comment header.
-   #+begin_src elisp
-     (defun es/center-comment ()
-       (interactive)
-       ;; 1. detect the comment style, either /* or //
-       ;; 2. get the comment text
-       ;; 3. get comment length
-       ;; 4. insert centered comment
+*** which-key
+    #+begin_src elisp
+      (use-package which-key
+        :init (which-key-mode 1)
+        :config
+        (setq which-key-side-window-location 'bottom
+	      which-key-sort-order #'which-key-key-order-alpha
+	      which-key-add-column-padding 1
+	      which-key-max-display-columns nil
+	      which-key-min-display-lines 6
+	      which-key-side-window-slot -10
+	      which-key-window-max-height 0.25
+	      which-key-idle-delay 0.4
+	      which-key-max-description-length 25
+	      which-key-allow-imprecise-window-fit t
+	      which-key-separator "  " ))
+     #+end_src
+    
+*** transient
+    Note, this package has given me issues issues with its dependency on seq.
+    see [[https://github.com/progfolio/elpaca/issues/216][this github issue]] for clarification.
+   
+    #+begin_src elisp
+      (use-package transient
+        :ensure t)
+    #+end_src
 
-       (beginning-of-line)
-       (skip-chars-forward "[:blank:]")
-
-       (let ((indent (current-column))
-             (comment-type (cond ((search-forward "//" (line-end-position) t) 'line)
-                                 ((search-forward "/*" (line-end-position) t) 'block)))
-             (heading (string-clean-whitespace
-                       (buffer-substring (point) (line-end-position))))
-             fill-char
-             beg-str
-             end-str
-             fill-len)
-
-         (cond ((eq comment-type 'line)
-                (setf fill-char ?/
-                      beg-str "//"
-                      end-str ""))
-               ((eq comment-type 'block)
-                (setf fill-char ?*
-                      beg-str "/*"
-                      end-str "*/")
-                (if (equal "*/" (substring heading
-                                           (- (length heading) 2)
-                                           (length heading)))
-                    (setf heading (string-clean-whitespace
-                                   (substring heading 0 (- (length heading) 2)))))))
-
-         (setf heading (concat " " heading " ")
-               fill-len (- fill-column
-                           indent
-                           (length heading)))
-
-         ;; comment-type is nil when there is no comment at (point)
-         (when (and comment-type (< 0 fill-len))
-           (delete-line)
-
-           (let ((fill-l (- (/ fill-len 2) (length beg-str)))
-                 (fill-r (- (ceiling (/ fill-len 2.0)) (length end-str))))
-
-             (mapcar #'insert
-                     (list (make-string indent #x20)
-                           beg-str
-                           (make-string fill-l fill-char) 
-                           heading
-                           (make-string fill-r fill-char)
-                           end-str
-                           "\n"))))))
-   #+end_src
-
-** lisp-mode
-   #+begin_src elisp
-     (keymap-global-set "C->" 'sp-slurp-hybrid-sexp)
-     (keymap-global-set "C-<" 'sp-forward-barf-sexp)
-     
-     (defun ethan-sly-keybinds ()
-       (interactive)
-       (keymap-set sly-mrepl-mode-map "C-M-p" 'sly-mrepl-previous-prompt)
-       (keymap-set sly-mrepl-mode-map "C-M-n" 'sly-mrepl-next-prompt))
-
-     (defun es/lisp-config ()
-       (interactive)
-       (keymap-set lisp-mode-map "C-k" 'sp-kill-hybrid-sexp)
-       (indent-bars-mode -1))
-
-     (add-hook 'sly-mrepl-mode-hook #'ethan-sly-keybinds)
-     (add-hook 'lisp-mode-hook #'es/lisp-config)
-   #+end_src
-
-** Makefile Mode
-   #+begin_src emacs-lisp
-     (defun es/makefile-mode-opts ()
-       (interactive)
-
-       (indent-tabs-mode 1))
-
-     (add-hook 'makefile-mode-hook 'es/makefile-mode-opts)
-   #+end_src
-* General Keybindings
+* Global Keybindings
   These are keybindings which I use everywhere all the time.
   #+begin_src elisp
     (defun ethan-open-config ()
@@ -877,7 +878,6 @@ Eamcs 29+ comes with native smooth scrolling, the following code enables it.
 #+end_src
 
 * Scratch Config
- 
 ** Title Utility
   #+begin_src elisp
     (defun insert-title (text)
