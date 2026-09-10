@@ -250,7 +250,7 @@
        (prog-mode . comment-tags-mode)
        (c-mode    . comment-tags-mode))
    #+end_src
-** indent-bars
+** indent-barsa
    There is an optional stipple mode that can provide potentially better looking
    indent bars, if your particular build of emacs supports it. I have it
    disabled for now. This package also uses emacs treesit to determine where the
@@ -361,11 +361,28 @@
      #+end_src
    
 ** go-mode
+   Go recommends running the formatter to deal with formatting issues.  I don't
+   want to have lots of formatting diffs in my commits, so I add the
+   ~gofmt-before-save~ function to the ~before-save-hook~ after go mode is
+   loaded.
+
    #+begin_src emacs-lisp
      (use-package go-mode
-       :ensure t)
+       :ensure t
+       :config (add-hook 'before-save-hook 'gofmt-before-save))
    #+end_src
 
+   Gofmt uses tabs for indentation instead of spaces, make Emacs use tabs in
+   these situations.
+
+   #+begin_src emacs-lisp
+     (defun es/go-mode-opts ()
+       (setf tab-width 4)
+       (indent-tabs-mode)
+       (indent-bars-reset))
+
+     (add-hook 'go-mode-hook 'es/go-mode-opts)
+   #+end_src
 ** docker stuff
    Download YAML mode for working with docker compose files.
    #+begin_src emacs-lisp
@@ -531,6 +548,8 @@
 
     (setq make-backup-files nil)
     (recentf-mode)
+
+    (setf tab-width 4)
 
     ;; allow window navigation with SHIFT+arrow
     ;; (windmove-default-keybindings)
