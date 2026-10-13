@@ -288,7 +288,11 @@
                             end-str
                             "\n"))))))
     #+end_src
-
+*** terraform-mode
+    #+begin_src emacs-lisp
+      (use-package terraform-mode
+        :ensure t)
+    #+end_src
 *** Makefile Mode
     #+begin_src emacs-lisp
       (defun es/makefile-mode-opts ()
@@ -408,6 +412,13 @@
         :ensure (:host github :repo "joaotavora/sly"))
     #+end_src
    
+*** doc-view
+    #+begin_src emacs-lisp
+      (add-hook 'doc-view-mode-hook #'auto-revert-mode)
+    #+end_src
+    
+
+
 * Minor Modes
 ** Aesthetics
 *** ligatures
@@ -676,7 +687,11 @@
 
       ;;(add-hook 'lsp-mode-hook 'lsp-headerline-breadcrumb-mode)
      #+end_src
-   
+
+     #+begin_src emacs-lisp
+       (use-package lsp-docker :ensure t)
+     #+end_src
+
 *** treemacs
     #+begin_src elisp
       (use-package treemacs
@@ -802,7 +817,7 @@
 * Global Keybindings
   These are keybindings which I use everywhere all the time.
   #+begin_src elisp
-    (defun ethan-open-config ()
+    (defun es/open-config ()
       (interactive)
 
       (find-file (let ((emacs-dir "~/.emacs.d/config.org")
@@ -817,13 +832,13 @@
 
                    dir)))
 
-    (keymap-global-set "C-c p" 'ethan-open-config)
+    (keymap-global-set "C-c p" 'es/open-config)
     (keymap-global-set "C-c t" 'treemacs)
     ;; (keymap-global-set "C-c b" )
 
     (require 'misc)
 
-    (defun es-swap-window (&optional current-window)
+    (defun es/swap-window (&optional current-window)
       (interactive)
       (let* ((win (or current-window
                       (window-child (window-parent (selected-window)))))
@@ -835,7 +850,7 @@
           (set-window-buffer next-win buf)
           (es-swap-window next-win))))
 
-    (keymap-global-set "C-c w" 'es-swap-window)
+    (keymap-global-set "C-c w" 'es/swap-window)
 
     ;; make scrolling much more sensible
     (keymap-global-set "C-v" 'View-scroll-half-page-forward)
