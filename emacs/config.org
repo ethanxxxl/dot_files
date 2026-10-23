@@ -657,6 +657,7 @@
         :ensure t
         :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
                (c-mode . lsp)
+               (c++-mode . lsp)
                (rust-mode . lsp)
                (zig-mode . lsp)
                (go-mode . lsp)
@@ -705,6 +706,7 @@
       ;;(add-hook 'lsp-mode-hook 'lsp-headerline-breadcrumb-mode)
      #+end_src
 
+     you need lsp-docker mode if your dev environment is in a docker container.
      #+begin_src emacs-lisp
        (use-package lsp-docker :ensure t)
      #+end_src
