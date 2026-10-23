@@ -196,10 +196,11 @@
           (setq-default indent-tabs-mode nil)))
     #+end_src
 
+    // NOTE temporarily set c-basic-offset to 3 for csce593 course
     #+begin_src elisp
       (c-add-style "my-c-style"
                    '("gnu"
-                     (c-basic-offset . 4)
+                     (c-basic-offset . 3)
                      (c-offsets-alist
                       (defun-block-intro      . +)   ; first line inside a function body
                       (statement-block-intro  . +)   ; first line inside any other block (if/for/while/etc.)
@@ -220,7 +221,7 @@
     per-buffer c-mode settings
     #+begin_src elisp
       (defun es/c-buffer-opts ()
-        (setf c-basic-offset 4)
+        (setf c-basic-offset 3)
 
         (indent-bars-reset)
 
@@ -411,14 +412,30 @@
       (use-package sly
         :ensure (:host github :repo "joaotavora/sly"))
     #+end_src
-   
-*** doc-view
+    
+*** pdf-tools
     #+begin_src emacs-lisp
-      (add-hook 'doc-view-mode-hook #'auto-revert-mode)
+      (use-package pdf-tools
+        :ensure t
+        :init
+        (progn
+          (pdf-tools-install)
+          (pdf-loader-install)))
+    #+end_src
+
+    auto reload PDF when file is saved
+    #+begin_src emacs-lisp
+      (add-hook 'pdf-view-mode-hook #'auto-revert-mode)
+    #+end_src
+
+    turn off extraneous stuff in this mode.
+    #+begin_src emacs-lisp
+      (add-hook 'pdf-view-mode-hook
+            (lambda ()
+              (display-line-numbers-mode -1)
+              (set-window-fringes nil 0 0)))
     #+end_src
     
-
-
 * Minor Modes
 ** Aesthetics
 *** ligatures
