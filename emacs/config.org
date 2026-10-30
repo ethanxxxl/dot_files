@@ -328,12 +328,12 @@
     Org needs htmlize to export fancy code src blocks.  Also, indent bars needs
     to be disabled for this to work.
 
-   #+begin_src elisp
-     (defun es/htmlize-mods ()
-       (indent-bars-mode -1))
+    #+begin_src elisp
+      (defun es/htmlize-mods ()
+        (indent-bars-mode -1))
 
-     (add-hook 'htmlize-before-hook 'es/htmlize-mods)
-   #+end_src
+      (add-hook 'htmlize-before-hook 'es/htmlize-mods)
+    #+end_src
 
     Org mode seems to have a bug/limiting factor that prevents multiline emphasis from displaying.
     that is, the following paragraph should be entirely italic:
@@ -355,14 +355,16 @@
         (org-set-emph-re 'org-emphasis-regexp-components org-emphasis-regexp-components))
     #+end_src
 
-    the following will enable org-babel to execute C source code in source
-    blcoks.  Apparently, it is important to use a capital "C" in the source
-    blocks.
+    In order for org-babel to compile/execute a langauge in a source block, it
+    needs to be enabled below.  Apparently, it is important to use a capital "C"
+    in the source blocks for C mode.
    
     #+begin_src elisp
       (org-babel-do-load-languages
-       'org-babel-load-languages '((C . t)))
+       'org-babel-load-languages '((C . t)
+                                   (python . t)))
     #+end_src
+
 
     use a better program for LATEX output:
     #+begin_src emacs-lisp
