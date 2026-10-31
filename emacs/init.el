@@ -55,9 +55,6 @@
   ;; Enable :elpaca use-package keyword.
   (elpaca-use-package-mode))
 
-;; Block until current queue processed.
-(elpaca-wait)
-
 ;; When installing a package which modifies a form used at the top-level
 ;; (e.g. a package which adds a use-package key word),
 ;; use `elpaca-wait' to block until that package has been installed/configured.
@@ -71,6 +68,13 @@
 ;;  (use-package emacs :ensure nil :config (setq ring-bell-function #'ignore))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Load Personal Configuration
+
+(elpaca-wait)
+(org-babel-load-file
+ (expand-file-name "config.org" user-emacs-directory))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emacs Custom Variables
 
 (custom-set-faces
@@ -80,10 +84,6 @@
  ;; If there is more than one, they won't work right.
  '(fixed-pitch-serif ((t (:box (:line-width (1 . 1) :color "gray" :style flat-button) :height 0.85 :family "Monospace")))))
 
-(org-babel-load-file
- (expand-file-name
-  "config.org"
-  user-emacs-directory))
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

@@ -10,6 +10,15 @@
     (setf use-package-always-defer t)
   #+end_src
 
+  This will ensure that there is compatibility for latest emacs, even in older
+  versions of emacs.  The ~:wait t~ makes this wait until everything in the
+  queue is loaded before compat is loaded.  I needed to add this after it
+  started getting loaded before Elpaca.
+  #+begin_src emacs-lisp
+    (use-package compat
+      :ensure (:wait t))
+  #+end_src
+
   #+begin_src emacs-lisp
     ;; remove title bar for a cleaner look
     (add-to-list 'default-frame-alist '(undecorated-round . t))
@@ -495,7 +504,7 @@
 
     #+begin_src elisp
       (defvar es/dark-theme 'modus-vivendi)
-      (defvar es/light-theme 'tango)
+      (defvar es/light-theme 'doom-monokai-classic)
     #+end_src
 
     The following code will track the current desktop theme setting.  It will
@@ -719,6 +728,7 @@
         :ensure t
         :defer t)
     #+end_src
+    
 *** smartparens
     #+begin_src elisp
       (use-package smartparens
@@ -746,31 +756,31 @@
     vertico also presents completions options in a variety of ways, such as in
     buffers, or in a grid layout.
     #+begin_src elisp
-      (use-package vertico
-        :ensure t
-        :init (vertico-mode)
-        :config
-        ;; Enable vertico-multiform
-        (vertico-multiform-mode)
+    (use-package vertico
+      :ensure t
+      :init (vertico-mode)
+      :config
+      ;; Enable vertico-multiform
+      (vertico-multiform-mode)
 
-        ;; Configure the display per command.
-        ;; Use a buffer with indices for imenu
-        ;; and a flat (Ido-like) menu for M-x.
-        (setq vertico-multiform-commands
-              '((consult-imenu buffer indexed)
-                (consult-buffer buffer indexed)
-                (consult-outline buffer indexed)
-                (execute-extended-command grid)))
+      ;; Configure the display per command.
+      ;; Use a buffer with indices for imenu
+      ;; and a flat (Ido-like) menu for M-x.
+      (setq vertico-multiform-commands
+            '((consult-imenu buffer indexed)
+              (consult-buffer buffer indexed)
+              (consult-outline buffer indexed)
+              (execute-extended-command grid)))
 
-        ;; Configure the display per completion category.
-        ;; Use the grid display for files and a buffer
-        ;; for the consult-grep commands.
-        (setq vertico-multiform-categories
-              '((file grid)
-                (consult-grep buffer))))
+      ;; Configure the display per completion category.
+      ;; Use the grid display for files and a buffer
+      ;; for the consult-grep commands.
+      (setq vertico-multiform-categories
+            '((file grid)
+              (consult-grep buffer))))
     #+end_src
 
-*** DISABLED helm 
+*** DISABLED Helm 
     I like helm, it provides pretty completion, but it is sort of awkward.  There
     is a bit of learning curve with file searching.  It also doesn't play well
     with consult.  For these reasons, I have ditched it in favor of ~vertico~
@@ -882,7 +892,7 @@
   #+end_src
 
   *CONSULT KEYBINDINGS*
-  #+begin_src elisp
+  #+begin_src elisp :exports none
     ;; enable imenu easily
     (keymap-global-set "C-c i" #'consult-imenu)
     (keymap-global-set "C-x ," #'consult-recent-file)
@@ -891,7 +901,7 @@
   #+end_src
 
 #+begin_src elisp
-  (keymap-global-set "C-x b" #'consult-buffer)
+  ;(keymap-global-set "C-x b" #'consult-buffer)
 #+end_src
 
 The half-page scrolling functions found in view.el are not interactive.  I wrote
@@ -934,13 +944,14 @@ Eamcs 29+ comes with native smooth scrolling, the following code enables it.
 * Scratch Config
 ** Title Utility
   #+begin_src elisp
-    (defun insert-title (text)
-    (interactive "sTitle: ")
-    (beginning-of-line)
-    (insert-char 59 80)
-    (insert "\n;; " text)
-    (unless (eql "\n" (length (thing-at-point 'line t)))
-      (insert "\n")))
+    (defun es/insert-title (text)
+      (interactive "sTitle: ")
+      (beginning-of-line)
+      (insert-char 59 80)
+      (insert "\n;; " text)
+      (unless (eql "\n" (length (thing-at-point 'line t)))
+        (insert "\n")))
 
-    (keymap-global-set "C-c n" 'insert-title)
+    (keymap-global-set "C-c n" 'es/insert-title)
   #+end_src
+ 
