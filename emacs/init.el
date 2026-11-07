@@ -1,3 +1,4 @@
+;; -*- lexical-binding: t; -*-
 ;;; AUTHOR: Ethan Smith
 ;;; DESCRIPTION: Emacs Config
 

@@ -4,6 +4,11 @@
 #+STARTUP: Overview
 
 * General Configuration
+  enabling lexical binding must be the first line in the file.
+  #+begin_src emacs-lisp
+    ;; -*- lexical-binding: t; -*-
+  #+end_src
+  
   startup optimization, Only load packages when they are referenced,
   not all at startup.
   #+begin_src emacs-lisp
@@ -672,6 +677,7 @@
                (rust-mode . lsp)
                (zig-mode . lsp)
                (go-mode . lsp)
+               (python-mode . lsp)
                ;; if you want which-key integration
                (lsp-mode . lsp-enable-which-key-integration))
         :commands lsp
@@ -898,11 +904,8 @@
     (keymap-global-set "C-x ," #'consult-recent-file)
     (keymap-global-set "C-x p f" #'consult-project-buffer)
     (keymap-global-set "C-x p g" #'consult-ripgrep)
+    (keymap-global-set "C-x b" #'consult-buffer)
   #+end_src
-
-#+begin_src elisp
-  ;(keymap-global-set "C-x b" #'consult-buffer)
-#+end_src
 
 The half-page scrolling functions found in view.el are not interactive.  I wrote
 wrapper functions for them so I can bind them to the default scroll keys.
