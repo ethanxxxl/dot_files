@@ -751,6 +751,16 @@
         :hook (after-init-hook . global-company-mode))
     #+end_src
 
+*** multiple cursors
+    #+begin_src emacs-lisp
+      (use-package multiple-cursors
+        :ensure t
+        :config
+        (global-set-key (kbd "M-n") 'mc/mark-next-like-this)
+        (global-set-key (kbd "M-p") 'mc/unmark-next-like-this)
+      )
+    #+end_src
+
 ** Global/General/Miscellaneous
 *** vertico
     this is an alternative to helm.  It provides completion in various contexts.
