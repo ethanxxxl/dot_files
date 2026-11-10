@@ -4,7 +4,7 @@
 #+STARTUP: Overview
 
 * General Configuration
-  enabling lexical binding must be the first line in the file.
+  enabling lexical binding *must be the first line* in the file.
   #+begin_src emacs-lisp
     ;; -*- lexical-binding: t; -*-
   #+end_src
@@ -14,7 +14,7 @@
   #+begin_src emacs-lisp
     (setf use-package-always-defer t)
   #+end_src
-
+ 
   This will ensure that there is compatibility for latest emacs, even in older
   versions of emacs.  The ~:wait t~ makes this wait until everything in the
   queue is loaded before compat is loaded.  I needed to add this after it
@@ -29,7 +29,17 @@
     (add-to-list 'default-frame-alist '(undecorated-round . t))
     (add-to-list 'default-frame-alist '(undecorated . t))
   #+end_src
-   
+
+  When loaded from sytemctl, environment variables aren't loaded in (such as
+  PATH).  This package fixes this.
+  #+begin_src emacs-lisp
+    (use-package exec-path-from-shell
+      :ensure t
+      :config
+      (when (daemonp)
+        (exec-path-from-shell-initialize)))
+  #+end_src
+
   #+begin_src elisp
     (global-display-line-numbers-mode 1)
 
